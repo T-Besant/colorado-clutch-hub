@@ -86,6 +86,27 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .cardname { font-weight: 700; font-size: 1.02rem; letter-spacing: -.01em; }
 .badge { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 
+/* Section drill picker: stacked choosable list (left) + selected video (right) */
+.drillpicker { display: grid; gap: 18px; grid-template-columns: 1fr; margin-top: 14px; }
+@media (min-width: 720px) {
+  .drillpicker { grid-template-columns: 250px 1fr; align-items: start; }
+}
+.drilllist { display: flex; flex-direction: column; gap: 7px; }
+.drillitem {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); text-decoration: none; color: var(--ink);
+  box-shadow: var(--shadow); transition: border-color .1s, background .1s;
+}
+.drillitem:hover { border-color: var(--sky); }
+.drillitem.active { border-color: var(--blue); background: var(--tint); }
+.di-title { font-weight: 600; font-size: .92rem; line-height: 1.25; }
+.di-meta { display: flex; align-items: center; gap: 6px; flex: none; }
+.di-done { color: var(--blue); font-weight: 800; }
+.drillmain { min-width: 0; }
+/* Keep the player a comfortable size (not full-bleed) on wide screens */
+.drillmain .video, .drillmain .fbwrap { max-width: 500px; }
+
 /* Activities */
 .activity {
   background: var(--card); border: 1px solid var(--line); border-radius: 14px;
@@ -263,7 +284,7 @@ input:focus, textarea:focus, select:focus {
 .board.compact td { padding: 8px; font-size: .9rem; }
 .board.compact .rank { width: 34px; }
 .board.compact .rankbadge { width: 22px; height: 22px; font-size: .72rem; }
-.board.compact .nm { line-height: 1.2; }
+.board.compact .nm { line-height: 1.2; white-space: nowrap; }
 .board.compact .big { text-align: right; font-size: 1rem; }
 .board.compact .stk { text-align: right; white-space: nowrap; color: var(--muted); font-size: .82rem; }
 .board.compact .youtag { font-size: .62rem; }

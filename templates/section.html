@@ -20,12 +20,25 @@
 
 {% if not activities %}
   <p class="empty">No drills posted here yet. Check back soon!</p>
-{% endif %}
+{% else %}
+{% set me = current_player() %}
+<div class="drillpicker">
+  <aside class="drilllist">
+    {% for a in activities %}
+      <a class="drillitem {{ 'active' if selected and a.id == selected.id else '' }}"
+         href="{{ url_for('section', slug=section.slug, drill=a.id) }}#drillview">
+        <span class="di-title">{{ a.title }}</span>
+        <span class="di-meta">
+          {% if a.repeatable %}<span class="tag-daily">Daily</span>{% endif %}
+          {% if me and mine[a.id].done %}<span class="di-done" title="Done">✓</span>{% endif %}
+        </span>
+      </a>
+    {% endfor %}
+  </aside>
 
-{% for a in activities %}
-  {% set me = current_player() %}
+  {% set a = selected %}
   {% set my = mine[a.id] if me else None %}
-  <article class="activity">
+  <section class="drillmain" id="drillview">
     <div class="ahead">
       <h2>{{ a.title }}{% if a.repeatable %} <span class="tag-daily">Daily</span>{% endif %}</h2>
       <span class="when">{{ a.created | nicedate }}</span>
@@ -37,7 +50,7 @@
       {% if me %}
         <form method="post" action="{{ url_for('toggle') }}" class="markform">
           <input type="hidden" name="activity_id" value="{{ a.id }}">
-          <input type="hidden" name="next" value="{{ request.path }}">
+          <input type="hidden" name="next" value="{{ url_for('section', slug=section.slug, drill=a.id) }}#drillview">
           {% if a.repeatable %}
             <button type="submit" class="bigmark {{ 'on' if my.done else '' }}">
               {{ '✓ Done today — tap to undo' if my.done else 'Mark done for today' }}
@@ -66,10 +79,11 @@
     {% if is_coach() %}
       <form method="post" action="{{ url_for('activity_delete', aid=a.id) }}" class="delline"
             onsubmit="return confirm('Remove this drill?');">
-        <input type="hidden" name="next" value="{{ request.path }}">
+        <input type="hidden" name="next" value="{{ url_for('section', slug=section.slug) }}">
         <button class="link-danger" type="submit">Remove drill</button>
       </form>
     {% endif %}
-  </article>
-{% endfor %}
+  </section>
+</div>
+{% endif %}
 {% endblock %}

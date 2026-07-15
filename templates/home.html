@@ -30,11 +30,12 @@
           </thead>
           <tbody>
             {% for r in board %}
+              {% set parts = r.name.split() %}
               <tr class="{{ 'meRow' if r.id == my_id else '' }}">
                 <td class="rank">
                   <span class="rankbadge {% if loop.index == 1 %}r1{% elif loop.index == 2 %}r2{% elif loop.index == 3 %}r3{% endif %}">{{ loop.index }}</span>
                 </td>
-                <td class="nm">{{ r.name }}{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
+                <td class="nm">{{ parts[0] }}{% if parts|length > 1 %} {{ parts[1][0] }}.{% endif %}{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
                 <td class="big">{{ r.total }}</td>
                 <td class="stk">{{ r.streak }}{% if r.streak > 0 %}🔥{% endif %}</td>
               </tr>

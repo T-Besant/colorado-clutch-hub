@@ -434,6 +434,11 @@ def section(slug):
                 "times": times,
                 "streak": _drill_streak(aid, me["id"]) if a["repeatable"] else 0,
             }
+    # Which drill is shown in the main pane (left-list picker). Default: newest.
+    sel = request.args.get("drill", type=int)
+    selected = None
+    if activities:
+        selected = next((a for a in activities if a["id"] == sel), activities[0])
     return render_template(
         "section.html",
         section=SECTION_BY_SLUG[slug],
@@ -441,6 +446,7 @@ def section(slug):
         players=players,
         done=done,
         mine=mine,
+        selected=selected,
     )
 
 
