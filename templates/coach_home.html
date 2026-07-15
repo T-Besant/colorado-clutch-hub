@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Coach — Colorado Clutch{% endblock %}
+{% block body %}
+<div class="coachhead">
+  <h1>Coach dashboard</h1>
+  <a class="btn small" href="{{ url_for('coach_today') }}">Today's participation →</a>
+</div>
+
+<section class="panel">
+  <h2>Post a drill</h2>
+  <form method="post" action="{{ url_for('activity_new') }}">
+    <label>Section
+      <select name="section" required>
+        {% for s in SECTIONS %}<option value="{{ s.slug }}">{{ s.emoji }} {{ s.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Title <input name="title" placeholder="e.g. Backhand Picks" required></label>
+    <label>Video link <input name="video_url" placeholder="Paste YouTube / Facebook / Instagram link"></label>
+    <label>Notes <textarea name="notes" rows="2" placeholder="Reps, cues, focus points…"></textarea></label>
+    <label class="check"><input type="checkbox" name="repeatable" value="1"> Repeatable — players can complete this every day (counts each day toward totals &amp; streaks)</label>
+    <button class="btn" type="submit">Post drill</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Roster ({{ players|length }})</h2>
+  <form method="post" action="{{ url_for('player_new') }}" class="inline">
+    <input name="name" placeholder="Add a player's name" required>
+    <button class="btn small" type="submit">Add</button>
+  </form>
+  <ul class="rosterlist">
+    {% for p in players %}
+      <li>
+        <span>{{ p.name }}
+          {% if p.pin_hash %}<span class="pinok" title="PIN set">🔒</span>
+          {% else %}<span class="pinno" title="No PIN yet">— no PIN</span>{% endif %}
+        </span>
+        <span class="rowacts">
+          {% if p.pin_hash %}
+            <form method="post" action="{{ url_for('player_resetpin', pid=p.id) }}"
+                  onsubmit="return confirm('Reset {{ p.name }}\'s PIN? They will set a new one at next login.');">
+              <button class="link-muted" type="submit">reset PIN</button>
+            </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('player_delete', pid=p.id) }}"
+                onsubmit="return confirm('Remove {{ p.name }}?');">
+            <button class="link-danger" type="submit">remove</button>
+          </form>
+        </span>
+      </li>
+    {% else %}
+      <li class="empty small">No players yet — add your team above.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section class="panel">
+  <h2>Posted drills ({{ activities|length }})</h2>
+  {% if not activities %}<p class="empty small">Nothing posted yet.</p>{% endif %}
+  <table class="tbl">
+    {% for a in activities %}
+      <tr>
+        <td>{{ SECTIONS | selectattr('slug','equalto',a.section) | map(attribute='emoji') | first }}</td>
+        <td><a href="{{ url_for('activity_detail', aid=a.id) }}">{{ a.title }}</a>{% if a.repeatable %} <span class="tag-daily">Daily</span>{% endif %}</td>
+        <td class="muted">{{ a.created | nicedate }}</td>
+        <td class="muted">{{ comp.get(a.id, 0) }} {{ 'completions' if a.repeatable else 'done' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('activity_delete', aid=a.id) }}"
+                onsubmit="return confirm('Remove this drill?');">
+            <button class="link-danger" type="submit">remove</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section class="panel">
+  <details>
+    <summary class="pinsummary">Change coach PIN</summary>
+    <p class="muted">This is the PIN you use to reach the coach area. Change it from the default before sharing the site.</p>
+    <form method="post" action="{{ url_for('coach_change_pin') }}" class="pinform">
+      <input name="current" type="password" inputmode="numeric" placeholder="Current PIN" required>
+      <input name="new" type="password" inputmode="numeric" placeholder="New PIN (4+ digits)" required>
+      <input name="confirm" type="password" inputmode="numeric" placeholder="Repeat new PIN" required>
+      <button class="btn small" type="submit">Update coach PIN</button>
+    </form>
+  </details>
+</section>
+{% endblock %}

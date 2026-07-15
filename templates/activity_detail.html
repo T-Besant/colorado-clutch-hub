@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ activity.title }} — Coach{% endblock %}
+{% block body %}
+<a class="back" href="{{ url_for('coach_home') }}">← Coach dashboard</a>
+<h1>{{ activity.title }}{% if activity.repeatable %} <span class="tag-daily">Daily</span>{% endif %}</h1>
+<p class="muted">{{ section.emoji }} {{ section.name }} · posted {{ activity.created | nicedate }}
+  {% if activity.repeatable %} · repeatable (counts every day){% endif %}</p>
+{% if activity.notes %}<p class="notes">{{ activity.notes }}</p>{% endif %}
+{{ embed_for(activity.video_url) }}
+
+<h2>Who's done it — {{ done|length }} of {{ players|length }}</h2>
+<table class="tbl">
+  {% for p in players %}
+    <tr>
+      <td>{{ '✅' if p.id in done else '⬜' }}</td>
+      <td>{{ p.name }}</td>
+      <td class="muted">
+        {%- if p.id in done -%}
+          {% if activity.repeatable %}{{ done[p.id].times }} day{{ '' if done[p.id].times == 1 else 's' }} · last {{ done[p.id].last | nicedate }}{% else %}{{ done[p.id].last | nicedate }}{% endif %}
+        {%- else -%}—{%- endif -%}
+      </td>
+    </tr>
+  {% endfor %}
+</table>{% endblock %}
+{% endblock %}

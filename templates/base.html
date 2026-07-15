@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}2027 Colorado Clutch 13U Training Hub{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <!-- Facebook SDK: renders the responsive <fb-video> embeds used on drill pages -->
+  <div id="fb-root"></div>
+  <script async defer crossorigin="anonymous"
+          src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v19.0"></script>
+
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}">
+      <img class="logo" src="{{ url_for('static', filename='logo.png') }}"
+           onerror="this.onerror=null;this.src='{{ url_for('static', filename='logo.svg') }}'"
+           alt="Colorado Clutch logo">
+      <span class="brandtext">2027 Colorado Clutch<span class="brandsub">13U Training Hub</span></span>
+    </a>
+    <nav>
+      {% set me = current_player() %}
+      <a href="{{ url_for('scoreboard') }}">Scoreboard</a>
+      {% if me %}
+        <a href="{{ url_for('me') }}">Hi, {{ me.name.split()[0] }}</a>
+        <a href="{{ url_for('logout') }}">Log out</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">Log in</a>
+      {% endif %}
+      {% if is_coach() %}
+        <a href="{{ url_for('coach_home') }}">Coach</a>
+      {% else %}
+        <a class="coachlink" href="{{ url_for('coach_login') }}">Coach</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="wrap">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}
+        <div class="flash {{ cat }}">{{ m }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </main>
+
+  <footer class="foot">Colorado Clutch · 13U · 2027</footer>
+</body>
+</html>

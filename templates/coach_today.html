@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Today — Coach — Colorado Clutch{% endblock %}
+{% block body %}
+<a class="back" href="{{ url_for('coach_home') }}">← Coach dashboard</a>
+<h1>Today's participation</h1>
+<p class="muted">{{ today | nicedate }}</p>
+
+{% set active_count = players | selectattr('id', 'in', active_today) | list | length %}
+<div class="stats">
+  <div class="stat"><span class="num">{{ active_count }}/{{ players|length }}</span><span class="lbl">Active today</span></div>
+  <div class="stat"><span class="num">{{ players|length - active_count }}</span><span class="lbl">Not yet today</span></div>
+  <div class="stat"><span class="num">{{ activities|length }}</span><span class="lbl">Active drills</span></div>
+</div>
+
+<section class="panel">
+  <h2>Not active today ({{ players|length - active_count }})</h2>
+  {% set idle = players | rejectattr('id', 'in', active_today) | list %}
+  {% if idle %}
+    <div class="chips">
+      {% for p in idle %}<span class="chip idle">{{ p.name }}</span>{% endfor %}
+    </div>
+  {% else %}
+    <p class="empty small">Everyone has trained today. 💯</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>By drill</h2>
+  {% if not activities %}<p class="empty small">No drills posted.</p>{% endif %}
+  {% for a in activities %}
+    <div class="drillrow">
+      <div class="drillrow-head">
+        <a href="{{ url_for('activity_detail', aid=a.id) }}">{{ a.title }}</a>
+        {% if a.repeatable %}<span class="tag-daily">Daily</span>{% endif %}
+        <span class="muted">{{ done_today[a.id]|length }}/{{ players|length }} today</span>
+      </div>
+      {% set names = [] %}
+      {% for p in players if p.id in done_today[a.id] %}{% set _ = names.append(p.name.split()[0]) %}{% endfor %}
+      {% if names %}<p class="who small">{{ names|join(', ') }}</p>
+      {% else %}<p class="who small muted">No one yet today.</p>{% endif %}
+    </div>
+  {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ player.name }} — Colorado Clutch{% endblock %}
+{% block body %}
+<a class="back" href="{{ url_for('login', next=next) }}">← Not you?</a>
+<h1>{{ player.name.split()[0] }}</h1>
+
+{% if has_pin %}
+  <p class="lead">Enter your PIN to log in.</p>
+  <form method="post" class="pinform">
+    <input type="hidden" name="next" value="{{ next }}">
+    <input name="pin" type="password" inputmode="numeric" placeholder="Your PIN" autofocus required>
+    <button class="btn" type="submit">Log in</button>
+  </form>
+  <p class="hint">Forgot it? Ask your coach to reset it.</p>
+{% else %}
+  <p class="lead">Welcome! Create a PIN (at least 4 digits) — you'll use it every time.</p>
+  <form method="post" class="pinform">
+    <input type="hidden" name="next" value="{{ next }}">
+    <input name="pin" type="password" inputmode="numeric" placeholder="Choose a PIN" autofocus required>
+    <input name="confirm" type="password" inputmode="numeric" placeholder="Type it again" required>
+    <button class="btn" type="submit">Create PIN &amp; log in</button>
+  </form>
+  <p class="hint">Pick something you'll remember, but not something easy for a teammate to guess.</p>
+{% endif %}
+{% endblock %}

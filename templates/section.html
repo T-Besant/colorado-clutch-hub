@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ section.name }} — Colorado Clutch{% endblock %}
+{% block body %}
+<a class="back" href="{{ url_for('home') }}">← All sections</a>
+<h1><img class="h1icon" src="{{ url_for('static', filename='icons/' ~ section.slug ~ '.svg') }}" alt="" width="26" height="26"> {{ section.name }}</h1>
+
+{% if is_coach() %}
+  <details class="postbox">
+    <summary>+ Post a new {{ section.name }} drill</summary>
+    <form method="post" action="{{ url_for('activity_new') }}">
+      <input type="hidden" name="section" value="{{ section.slug }}">
+      <label>Title <input name="title" placeholder="e.g. 4-Seam Grip &amp; Long Toss" required></label>
+      <label>Video link <input name="video_url" placeholder="Paste YouTube / FB / Instagram link"></label>
+      <label>Notes <textarea name="notes" rows="2" placeholder="Reps, cues, what to focus on…"></textarea></label>
+      <label class="check"><input type="checkbox" name="repeatable" value="1"> Repeatable — players can complete this every day</label>
+      <button class="btn" type="submit">Post drill</button>
+    </form>
+  </details>
+{% endif %}
+
+{% if not activities %}
+  <p class="empty">No drills posted here yet. Check back soon!</p>
+{% endif %}
+
+{% for a in activities %}
+  {% set me = current_player() %}
+  {% set my = mine[a.id] if me else None %}
+  <article class="activity">
+    <div class="ahead">
+      <h2>{{ a.title }}{% if a.repeatable %} <span class="tag-daily">Daily</span>{% endif %}</h2>
+      <span class="when">{{ a.created | nicedate }}</span>
+    </div>
+    {% if a.notes %}<p class="notes">{{ a.notes }}</p>{% endif %}
+    {{ embed_for(a.video_url) }}
+
+    <div class="roster">
+      {% if me %}
+        <form method="post" action="{{ url_for('toggle') }}" class="markform">
+          <input type="hidden" name="activity_id" value="{{ a.id }}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% if a.repeatable %}
+            <button type="submit" class="bigmark {{ 'on' if my.done else '' }}">
+              {{ '✓ Done today — tap to undo' if my.done else 'Mark done for today' }}
+            </button>
+          {% else %}
+            <button type="submit" class="bigmark {{ 'on' if my.done else '' }}">
+              {{ '✓ Done — tap to undo' if my.done else 'Mark as done' }}
+            </button>
+          {% endif %}
+        </form>
+        {% if a.repeatable and my.times %}
+          <p class="mystat">You've done this <strong>{{ my.times }}</strong> day{{ '' if my.times == 1 else 's' }}{% if my.streak > 0 %} · 🔥 {{ my.streak }}-day streak{% endif %}</p>
+        {% endif %}
+      {% else %}
+        <a class="btn" href="{{ url_for('login', next=request.path) }}">Log in to mark done</a>
+      {% endif %}
+
+      <p class="donelist">
+        {% set names = [] %}
+        {% for p in players if p.id in done[a.id] %}{% set _ = names.append(p.name.split()[0]) %}{% endfor %}
+        <strong>{{ done[a.id]|length }} of {{ players|length }} {{ 'did this today' if a.repeatable else 'done' }}</strong>
+        {% if names %}<span class="who"> — {{ names|join(', ') }}</span>{% endif %}
+      </p>
+    </div>
+
+    {% if is_coach() %}
+      <form method="post" action="{{ url_for('activity_delete', aid=a.id) }}" class="delline"
+            onsubmit="return confirm('Remove this drill?');">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button class="link-danger" type="submit">Remove drill</button>
+      </form>
+    {% endif %}
+  </article>
+{% endfor %}
+{% endblock %}

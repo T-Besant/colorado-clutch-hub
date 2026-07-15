@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Colorado Clutch">
+  <!-- white outer ring -->
+  <circle cx="50" cy="50" r="49" fill="#ffffff"/>
+  <!-- sky-blue disc -->
+  <circle cx="50" cy="50" r="43.5" fill="#58a8dd"/>
+  <!-- Old English 'C' — uses a blackletter face if the device has one,
+       otherwise falls back to a bold serif. White fill, black outline. -->
+  <text x="50" y="52" text-anchor="middle" dominant-baseline="central"
+        font-family="'Old English Text MT','UnifrakturCook','Cloister Black',Georgia,'Times New Roman',serif"
+        font-size="68" font-weight="700"
+        fill="#ffffff" stroke="#111111" stroke-width="2.4" paint-order="stroke">C</text>
+</svg>

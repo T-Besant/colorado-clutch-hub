@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}My Page — Colorado Clutch{% endblock %}
+{% block body %}
+<h1>{{ player.name.split()[0] }}'s Page</h1>
+
+<div class="stats stats4">
+  <div class="stat"><span class="num">{{ stats.total }}</span><span class="lbl">Activities</span></div>
+  <div class="stat"><span class="num">🔥 {{ stats.streak }}</span><span class="lbl">Day streak</span></div>
+  <div class="stat"><span class="num">{{ stats.week }}</span><span class="lbl">This week</span></div>
+  <div class="stat"><span class="num">{{ stats.active_days }}</span><span class="lbl">Active days</span></div>
+</div>
+<p class="todaynote {{ 'good' if stats.did_today else 'warn' }}">
+  {% if stats.did_today %}You've logged activity today — your streak is safe.{% else %}No activity logged today yet. Complete one drill to keep your streak going.{% endif %}
+</p>
+
+<section class="panel">
+  <h2>Log your own activity</h2>
+  <p class="muted">Trained on your own? Log it here — it counts toward your total and streak.</p>
+  <form method="post" action="{{ url_for('me_log') }}">
+    <label>What did you do? <input name="title" placeholder="e.g. Tee work — 50 swings" required></label>
+    <div class="row2">
+      <label>Type (optional)
+        <select name="section">
+          <option value="">— none —</option>
+          {% for s in SECTIONS %}<option value="{{ s.slug }}">{{ s.emoji }} {{ s.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Date <input name="logged_on" type="date" value="{{ today }}" max="{{ today }}"></label>
+    </div>
+    <button class="btn" type="submit">Log activity</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>My logged activities ({{ logs|length }})</h2>
+  {% if not logs %}<p class="empty small">Nothing yet — log your first one above!</p>{% endif %}
+  <table class="tbl">
+    {% for l in logs %}
+      <tr>
+        <td>{{ (SECTIONS | selectattr('slug','equalto',l.section) | map(attribute='emoji') | first) if l.section else '📝' }}</td>
+        <td>{{ l.title }}</td>
+        <td class="muted">{{ l.logged_on | nicedate }}</td>
+        <td>
+          <form method="post" action="{{ url_for('me_log_delete', lid=l.id) }}"
+                onsubmit="return confirm('Remove this?');">
+            <button class="link-danger" type="submit">remove</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section class="panel">
+  <h2>Coach drills I've checked off ({{ recent|length }}{{ '+' if recent|length == 10 else '' }})</h2>
+  {% if not recent %}<p class="empty small">None yet — head to the sections and mark some done.</p>{% endif %}
+  <table class="tbl">
+    {% for r in recent %}
+      <tr>
+        <td>{{ SECTIONS | selectattr('slug','equalto',r.section) | map(attribute='emoji') | first }}</td>
+        <td>{{ r.title }}</td>
+        <td class="muted">{{ r.done_at | nicedate }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

@@ -1,0 +1,13 @@
+# The live database and its backups — NEVER commit these (they hold your team's
+# real data, and committing would overwrite the server copy on deploy).
+hub.db
+hub.db.*
+*.db.bak*
+
+# The session secret — machine-specific, must stay out of source control.
+secret_key.txt
+
+# Python / editor cruft
+__pycache__/
+*.pyc
+~$*

@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "training-hub",
+      "runtimeExecutable": "C:\\Users\\travi\\.claude\\bookkeeping\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["app.py"],
+      "cwd": "C:\\Users\\travi\\.claude\\baseball-training-hub",
+      "port": 5055,
+      "autoPort": false
+    }
+  ]
+}

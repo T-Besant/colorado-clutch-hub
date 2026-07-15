@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Log in — Colorado Clutch{% endblock %}
+{% block body %}
+<h1>Who are you?</h1>
+<p class="lead">Tap your name. First time? You'll create your own PIN.</p>
+
+{% if not players %}
+  <p class="empty">No players on the roster yet. Ask your coach to add you.</p>
+{% endif %}
+
+<div class="chips namepick">
+  {% for p in players %}
+    <a class="chip big" href="{{ url_for('login_pin', pid=p.id, next=next) }}">
+      {{ p.name }}{% if not p.pin_hash %} <span class="newtag">new</span>{% endif %}
+    </a>
+  {% endfor %}
+</div>
+{% endblock %}

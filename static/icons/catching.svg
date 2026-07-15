@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="#0e2c47" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- mask cage: domed top, tapered chin -->
+  <path d="M9.5 12 C9.5 7.5 22.5 7.5 22.5 12 L22.5 16.5 C22.5 21 19 24 16 24 C13 24 9.5 21 9.5 16.5 Z"/>
+  <!-- ear loops (the tell-tale catcher's-mask straps) -->
+  <path d="M9.5 13.5 C6.3 14 6.3 17 9.5 17.5"/>
+  <path d="M22.5 13.5 C25.7 14 25.7 17 22.5 17.5"/>
+  <!-- cage bars -->
+  <g stroke-width="1.5">
+    <path d="M16 8.6 V22.8"/>
+    <path d="M10 13 H22"/>
+    <path d="M9.7 16.5 H22.3"/>
+    <path d="M11 20 H21"/>
+  </g>
+</svg>

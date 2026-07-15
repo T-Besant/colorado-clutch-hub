@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block body %}
+{% set me = current_player() %}
+{% if me and stats %}
+  <div class="mebanner">
+    <div>
+      <strong>Hi, {{ me.name.split()[0] }}!</strong>
+      <span class="mesub">{{ stats.total }} done · 🔥 {{ stats.streak }}-day streak</span>
+    </div>
+    <a class="btn small" href="{{ url_for('me') }}">My Page →</a>
+  </div>
+{% elif not me %}
+  <div class="mebanner ghost">
+    <span>Log in to check off drills and track your streak.</span>
+    <a class="btn small" href="{{ url_for('login') }}">Log in</a>
+  </div>
+{% endif %}
+
+<div class="homelayout">
+  <aside class="sbcol">
+    <div class="panel sbcard">
+      <div class="sbhead">
+        <h2>Scoreboard</h2>
+        <a class="seeall" href="{{ url_for('scoreboard') }}">See all →</a>
+      </div>
+      {% if board %}
+        <table class="board compact">
+          <thead>
+            <tr><th></th><th></th><th class="h-num">Done</th><th class="h-num">Streak</th></tr>
+          </thead>
+          <tbody>
+            {% for r in board %}
+              <tr class="{{ 'meRow' if r.id == my_id else '' }}">
+                <td class="rank">
+                  <span class="rankbadge {% if loop.index == 1 %}r1{% elif loop.index == 2 %}r2{% elif loop.index == 3 %}r3{% endif %}">{{ loop.index }}</span>
+                </td>
+                <td class="nm">{{ r.name }}{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
+                <td class="big">{{ r.total }}</td>
+                <td class="stk">{{ r.streak }}{% if r.streak > 0 %}🔥{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="empty small">No players yet.</p>
+      {% endif %}
+    </div>
+  </aside>
+
+  <section class="drillcol">
+    <h1>Daily Drills</h1>
+    <p class="lead">Pick a section, watch the video, then mark it done.</p>
+    <div class="grid">
+      {% for s in SECTIONS %}
+        <a class="card" href="{{ url_for('section', slug=s.slug) }}">
+          <span class="cardicon"><img src="{{ url_for('static', filename='icons/' ~ s.slug ~ '.svg') }}" alt="" width="26" height="26"></span>
+          <span class="cardname">{{ s.name }}</span>
+          <span class="badge">{{ counts[s.slug] }} drill{{ '' if counts[s.slug] == 1 else 's' }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

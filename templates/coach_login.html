@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Coach — Colorado Clutch{% endblock %}
+{% block body %}
+<h1>Coach access</h1>
+<p class="lead">Enter your coach PIN to post drills and manage the roster.</p>
+<form method="post" class="pinform">
+  <input name="pin" type="password" inputmode="numeric" placeholder="Coach PIN" autofocus>
+  <button class="btn" type="submit">Enter</button>
+</form>
+<p class="hint">Default PIN is <code>1234</code> — change it later.</p>
+{% endblock %}
