@@ -5,6 +5,8 @@
 <div class="coachhead">
   <h1>{{ player.name }}</h1>
   <span class="rowacts">
+    <a class="link-muted" href="{{ url_for('coach_player_csv', pid=player.id) }}">export CSV</a>
+    <button class="link-muted" type="button" onclick="window.print()">print</button>
     <form method="post" action="{{ url_for('player_resetpin', pid=player.id) }}"
           onsubmit="return confirm('Reset {{ player.name }}\'s PIN?');">
       <input type="hidden" name="next" value="{{ url_for('coach_player', pid=player.id) }}">
@@ -26,6 +28,22 @@
 <p class="todaynote {{ 'good' if stats.did_today else 'warn' }}">
   {% if stats.did_today %}Trained today.{% else %}No activity logged today.{% endif %}
 </p>
+
+<section class="panel">
+  <h2>Recent activity</h2>
+  {% if not feed %}<p class="empty small">No activity yet.</p>{% endif %}
+  <ul class="timeline">
+    {% for e in feed %}
+      <li>
+        <span class="tl-date">{{ e.date | nicedate }}</span>
+        <span class="tl-what">
+          {% if e.kind == 'drill' %}Completed <strong>{{ e.title }}</strong>{% else %}Logged <strong>{{ e.title }}</strong>{% endif %}
+          {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
 
 <section class="panel">
   <h2>Coach drills completed ({{ drills|length }})</h2>

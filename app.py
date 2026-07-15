@@ -23,7 +23,7 @@ from functools import wraps
 
 from flask import (
     Flask, g, render_template, request, redirect, url_for,
-    session, flash, abort, jsonify,
+    session, flash, abort, jsonify, Response,
 )
 from markupsafe import Markup
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -754,6 +754,22 @@ def player_resetpin(pid):
     return redirect(request.form.get("next") or url_for("coach_home"))
 
 
+def _player_feed(pid, limit=None):
+    """Merged chronological activity feed (drill completions + self-logs)."""
+    db = get_db()
+    feed = []
+    for r in db.execute(
+        """SELECT c.done_on d, a.title t, a.section s
+             FROM completions c JOIN activities a ON a.id = c.activity_id
+            WHERE c.player_id = ?""", (pid,)):
+        feed.append({"date": r["d"], "kind": "drill", "title": r["t"], "section": r["s"]})
+    for r in db.execute(
+        "SELECT logged_on d, title t, section s FROM personal_logs WHERE player_id=?", (pid,)):
+        feed.append({"date": r["d"], "kind": "log", "title": r["t"], "section": r["s"]})
+    feed.sort(key=lambda x: x["date"] or "", reverse=True)
+    return feed[:limit] if limit else feed
+
+
 @app.route("/coach/player/<int:pid>")
 @coach_required
 def coach_player(pid):
@@ -762,6 +778,7 @@ def coach_player(pid):
     if not player:
         abort(404)
     stats = player_stats(pid)
+    feed = _player_feed(pid, limit=60)
     # Drill completions rolled up per drill (works even for removed drills).
     drills = db.execute(
         """SELECT a.title, a.section, a.repeatable, COUNT(*) times, MAX(c.done_on) last
@@ -776,7 +793,32 @@ def coach_player(pid):
         (pid,),
     ).fetchall()
     return render_template(
-        "coach_player.html", player=player, stats=stats, drills=drills, logs=logs
+        "coach_player.html", player=player, stats=stats, drills=drills, logs=logs, feed=feed
+    )
+
+
+@app.route("/coach/player/<int:pid>/export.csv")
+@coach_required
+def coach_player_csv(pid):
+    import csv, io
+    db = get_db()
+    player = db.execute("SELECT * FROM players WHERE id=?", (pid,)).fetchone()
+    if not player:
+        abort(404)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Date", "Type", "Activity", "Section"])
+    for e in _player_feed(pid):
+        w.writerow([
+            e["date"],
+            "Coach drill" if e["kind"] == "drill" else "Self-logged",
+            e["title"],
+            (SECTION_BY_SLUG.get(e["section"], {}).get("name", "") if e["section"] else ""),
+        ])
+    safe = "".join(ch for ch in player["name"] if ch.isalnum() or ch in " _-").strip().replace(" ", "_")
+    return Response(
+        buf.getvalue(), mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename={safe or "player"}_activity.csv'},
     )
 
 

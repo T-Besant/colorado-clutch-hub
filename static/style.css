@@ -305,6 +305,22 @@ input:focus, textarea:focus, select:focus {
 .empty.small { padding: 8px 0; text-align: left; border: 0; background: none; }
 .foot { text-align: center; color: #9aa7b4; padding: 24px; font-size: .82rem; letter-spacing: .02em; }
 
+/* Per-player activity timeline */
+.timeline { list-style: none; padding: 0; margin: 8px 0 0; }
+.timeline li { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.timeline li:last-child { border-bottom: 0; }
+.tl-date { flex: none; width: 92px; color: var(--muted); font-size: .82rem; font-variant-numeric: tabular-nums; }
+.tl-what { min-width: 0; }
+
+/* Print / save-as-PDF: strip nav, buttons, and chrome for a clean sheet */
+@media print {
+  .topbar, .foot, .back, .rowacts, .postbox { display: none !important; }
+  body { background: #fff; color: #000; }
+  .panel, .stat, .board, .card { box-shadow: none; border-color: #bbb; }
+  a { color: #000; text-decoration: none; }
+  .wrap { max-width: 100%; padding: 0; }
+}
+
 @media (max-width: 480px) {
   .grid { gap: 10px; }
   .stats { gap: 8px; }
