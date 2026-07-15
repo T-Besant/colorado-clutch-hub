@@ -751,7 +751,33 @@ def player_resetpin(pid):
     get_db().execute("UPDATE players SET pin_hash=NULL WHERE id=?", (pid,))
     get_db().commit()
     flash("PIN reset — the player will set a new one at next login.", "ok")
-    return redirect(url_for("coach_home"))
+    return redirect(request.form.get("next") or url_for("coach_home"))
+
+
+@app.route("/coach/player/<int:pid>")
+@coach_required
+def coach_player(pid):
+    db = get_db()
+    player = db.execute("SELECT * FROM players WHERE id=?", (pid,)).fetchone()
+    if not player:
+        abort(404)
+    stats = player_stats(pid)
+    # Drill completions rolled up per drill (works even for removed drills).
+    drills = db.execute(
+        """SELECT a.title, a.section, a.repeatable, COUNT(*) times, MAX(c.done_on) last
+             FROM completions c JOIN activities a ON a.id = c.activity_id
+            WHERE c.player_id = ?
+            GROUP BY c.activity_id
+            ORDER BY last DESC""",
+        (pid,),
+    ).fetchall()
+    logs = db.execute(
+        "SELECT * FROM personal_logs WHERE player_id=? ORDER BY logged_on DESC, id DESC",
+        (pid,),
+    ).fetchall()
+    return render_template(
+        "coach_player.html", player=player, stats=stats, drills=drills, logs=logs
+    )
 
 
 @app.route("/coach/activity/<int:aid>")

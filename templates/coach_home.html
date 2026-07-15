@@ -24,6 +24,7 @@
 
 <section class="panel">
   <h2>Roster ({{ players|length }})</h2>
+  <p class="muted">Tap a player's name to see everything they've been doing.</p>
   <form method="post" action="{{ url_for('player_new') }}" class="inline">
     <input name="name" placeholder="Add a player's name" required>
     <button class="btn small" type="submit">Add</button>
@@ -31,7 +32,8 @@
   <ul class="rosterlist">
     {% for p in players %}
       <li>
-        <span>{{ p.name }}
+        <span>
+          <a href="{{ url_for('coach_player', pid=p.id) }}">{{ p.name }}</a>
           {% if p.pin_hash %}<span class="pinok" title="PIN set">🔒</span>
           {% else %}<span class="pinno" title="No PIN yet">— no PIN</span>{% endif %}
         </span>
