@@ -27,7 +27,10 @@
     {% for a in activities %}
       <a class="drillitem {{ 'active' if selected and a.id == selected.id else '' }}"
          href="{{ url_for('section', slug=section.slug, drill=a.id) }}#drillview">
-        <span class="di-title">{{ a.title }}</span>
+        <span class="di-main">
+          <span class="di-title">{{ a.title }}</span>
+          <span class="di-date">{{ a.created | nicedate }}</span>
+        </span>
         <span class="di-meta">
           {% if a.repeatable %}<span class="tag-daily">Daily</span>{% endif %}
           {% if me and mine[a.id].done %}<span class="di-done" title="Done">✓</span>{% endif %}

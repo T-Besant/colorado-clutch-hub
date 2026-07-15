@@ -100,7 +100,9 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 }
 .drillitem:hover { border-color: var(--sky); }
 .drillitem.active { border-color: var(--blue); background: var(--tint); }
+.di-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .di-title { font-weight: 600; font-size: .92rem; line-height: 1.25; }
+.di-date { font-size: .72rem; color: var(--muted); }
 .di-meta { display: flex; align-items: center; gap: 6px; flex: none; }
 .di-done { color: var(--blue); font-weight: 800; }
 .drillmain { min-width: 0; }
