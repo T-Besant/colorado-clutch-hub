@@ -4,6 +4,8 @@
 <a class="back" href="{{ url_for('home') }}">← All sections</a>
 <h1><img class="h1icon" src="{{ url_for('static', filename='icons/' ~ section.slug ~ '.svg') }}" alt="" width="26" height="26"> {{ section.name }}</h1>
 
+<p class="selfnote">💡 Doing extra work on your own? You're not limited to what's posted here — <a href="{{ url_for('me') }}">log your own activity</a> and it still counts toward your total and streak.</p>
+
 {% if is_coach() %}
   <details class="postbox">
     <summary>+ Post a new {{ section.name }} drill</summary>

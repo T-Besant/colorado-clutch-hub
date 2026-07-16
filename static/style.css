@@ -53,6 +53,13 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .back:hover { color: var(--blue); }
 .emoji { font-size: 1.05em; }
 
+/* "Log your own activity" reminder on section pages */
+.selfnote {
+  background: var(--tint); border: 1px solid #cfe3f4; border-radius: 10px;
+  padding: 10px 14px; font-size: .9rem; color: #2c4a63; margin: 0 0 16px;
+}
+.selfnote a { font-weight: 700; color: var(--blue); }
+
 /* Home two-column layout: scoreboard left, drills right (stacks on phones) */
 .homelayout { display: grid; gap: 20px; grid-template-columns: 1fr; grid-template-areas: "drills" "score"; }
 .sbcol { grid-area: score; }
