@@ -50,7 +50,7 @@
 
   <section class="drillcol">
     <h1>Daily Drills</h1>
-    <p class="lead">Pick a section, watch the video, do the drill it shows you — then mark it done.</p>
+    <p class="lead">Pick a section, watch the video, do the drill it shows you — then mark it done. Training on your own counts too — <a href="{{ url_for('me') }}">log your own activity</a> anytime.</p>
     <div class="grid">
       {% for s in SECTIONS %}
         <a class="card" href="{{ url_for('section', slug=s.slug) }}">
