@@ -31,15 +31,42 @@
 
 <section class="panel">
   <h2>Recent activity</h2>
+  <p class="muted">Drop a note on any item so {{ player.name.split()[0] }} knows you're watching their work — they'll see it on their page.</p>
   {% if not feed %}<p class="empty small">No activity yet.</p>{% endif %}
   <ul class="timeline">
     {% for e in feed %}
-      <li>
-        <span class="tl-date">{{ e.date | nicedate }}</span>
-        <span class="tl-what">
-          {% if e.kind == 'drill' %}Completed <strong>{{ e.title }}</strong>{% else %}Logged <strong>{{ e.title }}</strong>{% endif %}
-          {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
-        </span>
+      {% set notes = comments.get((e.kind, e.key), []) %}
+      <li class="tl-item">
+        <div class="tl-row">
+          <span class="tl-date">{{ e.date | nicedate }}</span>
+          <span class="tl-what">
+            {% if e.kind == 'drill' %}Completed <strong>{{ e.title }}</strong>{% else %}Logged <strong>{{ e.title }}</strong>{% endif %}
+            {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
+          </span>
+        </div>
+        <div class="tl-notes">
+          {% for c in notes %}
+            <div class="cmt cmt-sm">
+              <p class="cmt-body">💬 {{ c.body }}</p>
+              <p class="cmt-meta">
+                {{ c.created | nicedate }}{% if not c.seen %} · <span class="unseen">unseen</span>{% endif %}
+                · <form method="post" action="{{ url_for('coach_comment_delete', cid=c.id) }}"
+                        onsubmit="return confirm('Remove this note?');">
+                    <input type="hidden" name="next" value="{{ url_for('coach_player', pid=player.id) }}">
+                    <button class="link-danger" type="submit">remove</button>
+                  </form>
+              </p>
+            </div>
+          {% endfor %}
+          <form class="noteform" method="post" action="{{ url_for('coach_comment') }}">
+            <input type="hidden" name="player_id" value="{{ player.id }}">
+            <input type="hidden" name="item_kind" value="{{ e.kind }}">
+            <input type="hidden" name="item_key" value="{{ e.key }}">
+            <input type="hidden" name="next" value="{{ url_for('coach_player', pid=player.id) }}">
+            <input name="body" placeholder="Add a note…" maxlength="280" aria-label="Add a note">
+            <button class="btn small" type="submit">Send</button>
+          </form>
+        </div>
       </li>
     {% endfor %}
   </ul>

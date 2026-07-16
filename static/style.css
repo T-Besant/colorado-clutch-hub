@@ -311,6 +311,34 @@ input:focus, textarea:focus, select:focus {
 .timeline li:last-child { border-bottom: 0; }
 .tl-date { flex: none; width: 92px; color: var(--muted); font-size: .82rem; font-variant-numeric: tabular-nums; }
 .tl-what { min-width: 0; }
+/* Timeline item that can carry coach notes stacks vertically */
+.timeline li.tl-item { flex-direction: column; gap: 6px; }
+.tl-row { display: flex; gap: 12px; }
+.tl-notes { margin-left: 104px; }
+@media (max-width: 480px) { .tl-notes { margin-left: 0; } }
+.tl-what a { color: var(--navy); font-weight: 700; text-decoration: none; }
+.tl-what a:hover { color: var(--blue); }
+
+/* Coach note bubbles */
+.coachfb { border-left: 3px solid var(--sky); }
+.cmt { background: var(--tint); border-radius: 10px; padding: 10px 13px; margin: 8px 0; }
+.cmt-sm { margin: 4px 0; padding: 8px 11px; }
+.cmt-body { margin: 0; color: var(--ink); font-weight: 500; }
+.cmt-meta { margin: 4px 0 0; color: var(--muted); font-size: .78rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cmt-meta form { margin: 0; display: inline; }
+.unseen { background: var(--gold); color: #5a4400; border-radius: 5px; padding: 0 6px; font-weight: 700; font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; }
+.noteform { display: flex; gap: 8px; align-items: center; margin: 6px 0 0; }
+.noteform input { margin-top: 0; }
+
+/* Nav "unseen notes" badge */
+.notif { background: var(--gold); color: #4a3800; border-radius: 8px; padding: 1px 7px; font-size: .74rem; font-weight: 800; }
+
+/* Team roster list (sidebar) */
+.teamroster { list-style: none; padding: 0; margin: 4px 0 0; }
+.teamroster li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.teamroster li:last-child { border-bottom: 0; }
+.teamroster a { color: var(--navy); font-weight: 600; text-decoration: none; }
+.teamroster a:hover { color: var(--blue); }
 
 /* Print / save-as-PDF: strip nav, buttons, and chrome for a clean sheet */
 @media print {

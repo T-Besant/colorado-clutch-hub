@@ -18,7 +18,7 @@
         <td class="rank">
           <span class="rankbadge {% if loop.index == 1 %}r1{% elif loop.index == 2 %}r2{% elif loop.index == 3 %}r3{% endif %}">{{ loop.index }}</span>
         </td>
-        <td>{{ r.name }}{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
+        <td><a href="{{ url_for('player_profile', pid=r.id) }}">{{ r.name }}</a>{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
         <td class="big">{{ r.total }}</td>
         <td>{{ r.streak }}{% if r.streak > 0 %} 🔥{% endif %}</td>
       </tr>

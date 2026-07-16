@@ -13,6 +13,19 @@
   {% if stats.did_today %}You've logged activity today — your streak is safe.{% else %}No activity logged today yet. Complete one drill to keep your streak going.{% endif %}
 </p>
 
+{% if notes %}
+<section class="panel coachfb">
+  <h2>💬 Notes from Coach</h2>
+  <p class="muted">Coach is reviewing your work — here's what they said.</p>
+  {% for n in notes %}
+    <div class="cmt">
+      <p class="cmt-body">{{ n.body }}</p>
+      <p class="cmt-meta">on <strong>{{ n.about }}</strong> · {{ n.created | nicedate }}</p>
+    </div>
+  {% endfor %}
+</section>
+{% endif %}
+
 <section class="panel">
   <h2>Log your own activity</h2>
   <p class="muted">Trained on your own? Log it here — it counts toward your total and streak.</p>

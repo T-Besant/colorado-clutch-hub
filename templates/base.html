@@ -23,9 +23,11 @@
     </a>
     <nav>
       {% set me = current_player() %}
+      <a href="{{ url_for('team') }}">Team</a>
       <a href="{{ url_for('scoreboard') }}">Scoreboard</a>
       {% if me %}
-        <a href="{{ url_for('me') }}">Hi, {{ me.name.split()[0] }}</a>
+        {% set unseen = unseen_comments(me.id) %}
+        <a href="{{ url_for('me') }}">Hi, {{ me.name.split()[0] }}{% if unseen %} <span class="notif">💬 {{ unseen }}</span>{% endif %}</a>
         <a href="{{ url_for('logout') }}">Log out</a>
       {% else %}
         <a href="{{ url_for('login') }}">Log in</a>

@@ -137,6 +137,20 @@ def init_db():
             key   TEXT PRIMARY KEY,
             value TEXT
         );
+
+        -- Coach notes left on a player's feed item (a drill completion or a
+        -- self-logged activity). item_key ties the note to one item:
+        --   drill -> '<activity_id>:<done_on>'   log -> '<personal_log id>'
+        CREATE TABLE IF NOT EXISTS feed_comments (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id  INTEGER NOT NULL,
+            item_kind  TEXT NOT NULL,      -- 'drill' or 'log'
+            item_key   TEXT NOT NULL,
+            body       TEXT NOT NULL,
+            created    TEXT NOT NULL,
+            seen       INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+        );
         """
     )
     # Migration: add pin_hash to an older players table if it's missing.
@@ -282,8 +296,17 @@ def coach_required(fn):
     return wrapper
 
 
+def unseen_comments(pid):
+    """How many coach notes this player hasn't seen yet (for a nav badge)."""
+    row = get_db().execute(
+        "SELECT COUNT(*) n FROM feed_comments WHERE player_id=? AND seen=0", (pid,)
+    ).fetchone()
+    return row["n"] if row else 0
+
+
 app.jinja_env.globals["current_player"] = current_player
 app.jinja_env.globals["is_coach"] = lambda: bool(session.get("coach"))
+app.jinja_env.globals["unseen_comments"] = unseen_comments
 
 
 # ---------------------------------------------------------------------------
@@ -578,8 +601,25 @@ def me():
             WHERE c.player_id=? ORDER BY c.done_at DESC LIMIT 10""",
         (p["id"],),
     ).fetchall()
+    # Coach notes on this player's items — resolve each to the item it's about,
+    # newest first, then mark them all seen (viewing = read).
+    notes = []
+    for c in db.execute(
+        "SELECT * FROM feed_comments WHERE player_id=? ORDER BY created DESC", (p["id"],)
+    ):
+        if c["item_kind"] == "drill":
+            aid = c["item_key"].split(":", 1)[0]
+            ref = db.execute("SELECT title FROM activities WHERE id=?", (aid,)).fetchone()
+        else:
+            ref = db.execute("SELECT title FROM personal_logs WHERE id=?", (c["item_key"],)).fetchone()
+        notes.append({"body": c["body"], "created": c["created"], "seen": c["seen"],
+                      "about": ref["title"] if ref else "an activity"})
+    if any(not n["seen"] for n in notes):
+        db.execute("UPDATE feed_comments SET seen=1 WHERE player_id=? AND seen=0", (p["id"],))
+        db.commit()
     return render_template(
-        "me.html", player=p, stats=stats, logs=logs, recent=recent, today=date.today().isoformat()
+        "me.html", player=p, stats=stats, logs=logs, recent=recent, notes=notes,
+        today=date.today().isoformat()
     )
 
 
@@ -630,6 +670,43 @@ def scoreboard():
         "scoreboard.html",
         rows=_scoreboard_rows(),
         my_id=(me["id"] if me else None),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Team view — players can SEE what everyone is working on (read-only). No
+# edit controls are rendered and the /toggle route ignores any submitted
+# player id, so a player can never change another player's work.
+# ---------------------------------------------------------------------------
+@app.route("/team")
+def team():
+    db = get_db()
+    players = db.execute(
+        "SELECT * FROM players WHERE active=1 ORDER BY name COLLATE NOCASE"
+    ).fetchall()
+    roster = [{"name": p["name"], "id": p["id"], **player_stats(p["id"])} for p in players]
+    me = current_player()
+    return render_template(
+        "team.html", feed=_team_feed(), roster=roster,
+        my_id=(me["id"] if me else None),
+    )
+
+
+@app.route("/players/<int:pid>")
+def player_profile(pid):
+    db = get_db()
+    player = db.execute(
+        "SELECT * FROM players WHERE id=? AND active=1", (pid,)
+    ).fetchone()
+    if not player:
+        abort(404)
+    me = current_player()
+    return render_template(
+        "player_profile.html",
+        player=player,
+        stats=player_stats(pid),
+        feed=_player_feed(pid, limit=60),
+        is_me=(me is not None and me["id"] == pid),
     )
 
 
@@ -755,19 +832,57 @@ def player_resetpin(pid):
 
 
 def _player_feed(pid, limit=None):
-    """Merged chronological activity feed (drill completions + self-logs)."""
+    """Merged chronological activity feed (drill completions + self-logs).
+    Each item carries a stable `key` (with `kind`) that a coach note attaches
+    to: drill -> '<activity_id>:<done_on>', log -> '<personal_log id>'."""
     db = get_db()
     feed = []
     for r in db.execute(
-        """SELECT c.done_on d, a.title t, a.section s
+        """SELECT c.activity_id aid, c.done_on d, a.title t, a.section s
              FROM completions c JOIN activities a ON a.id = c.activity_id
             WHERE c.player_id = ?""", (pid,)):
-        feed.append({"date": r["d"], "kind": "drill", "title": r["t"], "section": r["s"]})
+        feed.append({"date": r["d"], "kind": "drill", "title": r["t"], "section": r["s"],
+                     "key": f'{r["aid"]}:{r["d"]}'})
     for r in db.execute(
-        "SELECT logged_on d, title t, section s FROM personal_logs WHERE player_id=?", (pid,)):
-        feed.append({"date": r["d"], "kind": "log", "title": r["t"], "section": r["s"]})
+        "SELECT id, logged_on d, title t, section s FROM personal_logs WHERE player_id=?", (pid,)):
+        feed.append({"date": r["d"], "kind": "log", "title": r["t"], "section": r["s"],
+                     "key": str(r["id"])})
     feed.sort(key=lambda x: x["date"] or "", reverse=True)
     return feed[:limit] if limit else feed
+
+
+def _comments_for(pid):
+    """Coach notes on this player's items, keyed by (item_kind, item_key)."""
+    db = get_db()
+    out = {}
+    for r in db.execute(
+        "SELECT * FROM feed_comments WHERE player_id=? ORDER BY created", (pid,)
+    ):
+        out.setdefault((r["item_kind"], r["item_key"]), []).append(r)
+    return out
+
+
+def _team_feed(limit=80):
+    """Recent activity across the whole team — read-only, for players to see
+    what everyone is working on."""
+    db = get_db()
+    feed = []
+    for r in db.execute(
+        """SELECT p.id pid, p.name, c.done_on d, a.title t, a.section s
+             FROM completions c
+             JOIN activities a ON a.id = c.activity_id
+             JOIN players p    ON p.id = c.player_id
+            WHERE p.active = 1"""):
+        feed.append({"pid": r["pid"], "name": r["name"], "date": r["d"],
+                     "kind": "drill", "title": r["t"], "section": r["s"]})
+    for r in db.execute(
+        """SELECT p.id pid, p.name, l.logged_on d, l.title t, l.section s
+             FROM personal_logs l JOIN players p ON p.id = l.player_id
+            WHERE p.active = 1"""):
+        feed.append({"pid": r["pid"], "name": r["name"], "date": r["d"],
+                     "kind": "log", "title": r["t"], "section": r["s"]})
+    feed.sort(key=lambda x: x["date"] or "", reverse=True)
+    return feed[:limit]
 
 
 @app.route("/coach/player/<int:pid>")
@@ -793,8 +908,42 @@ def coach_player(pid):
         (pid,),
     ).fetchall()
     return render_template(
-        "coach_player.html", player=player, stats=stats, drills=drills, logs=logs, feed=feed
+        "coach_player.html", player=player, stats=stats, drills=drills, logs=logs,
+        feed=feed, comments=_comments_for(pid),
     )
+
+
+@app.route("/coach/comment", methods=["POST"])
+@coach_required
+def coach_comment():
+    """Coach leaves a note on one of a player's feed items."""
+    pid = request.form.get("player_id", type=int)
+    kind = request.form.get("item_kind", "")
+    key = (request.form.get("item_key") or "").strip()
+    body = (request.form.get("body") or "").strip()
+    nxt = request.form.get("next") or url_for("coach_player", pid=pid)
+    if not pid or kind not in ("drill", "log") or not key:
+        abort(400)
+    if not body:
+        flash("Write a note first.", "error")
+        return redirect(nxt)
+    get_db().execute(
+        "INSERT INTO feed_comments(player_id, item_kind, item_key, body, created) "
+        "VALUES(?,?,?,?,?)",
+        (pid, kind, key, body, datetime.now().isoformat(timespec="seconds")),
+    )
+    get_db().commit()
+    flash("Note added — the player will see it on their page.", "ok")
+    return redirect(nxt)
+
+
+@app.route("/coach/comment/<int:cid>/delete", methods=["POST"])
+@coach_required
+def coach_comment_delete(cid):
+    get_db().execute("DELETE FROM feed_comments WHERE id=?", (cid,))
+    get_db().commit()
+    flash("Note removed.", "ok")
+    return redirect(request.form.get("next") or url_for("coach_home"))
 
 
 @app.route("/coach/player/<int:pid>/export.csv")

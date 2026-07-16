@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Team — Colorado Clutch{% endblock %}
+{% block body %}
+<h1>Team Activity</h1>
+<p class="lead">See what your teammates are working on. You can look, but only you can check off your own drills.</p>
+
+<div class="homelayout">
+  <aside class="sbcol">
+    <div class="panel sbcard">
+      <div class="sbhead"><h2>Players</h2></div>
+      <ul class="teamroster">
+        {% for r in roster %}
+          <li>
+            <a href="{{ url_for('player_profile', pid=r.id) }}">{{ r.name }}{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</a>
+            <span class="muted">{{ r.total }} · 🔥{{ r.streak }}</span>
+          </li>
+        {% endfor %}
+        {% if not roster %}<li class="empty small">No players yet.</li>{% endif %}
+      </ul>
+    </div>
+  </aside>
+
+  <section class="drillcol">
+    <h2>Recent activity</h2>
+    {% if not feed %}<p class="empty small">No activity yet — be the first to log something!</p>{% endif %}
+    <ul class="timeline">
+      {% for e in feed %}
+        <li>
+          <span class="tl-date">{{ e.date | nicedate }}</span>
+          <span class="tl-what">
+            <a href="{{ url_for('player_profile', pid=e.pid) }}"><strong>{{ e.name.split()[0] }}</strong></a>
+            {% if e.kind == 'drill' %}completed {{ e.title }}{% else %}logged {{ e.title }}{% endif %}
+            {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

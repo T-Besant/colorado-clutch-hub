@@ -7,6 +7,10 @@ hub.db.*
 # The session secret — machine-specific, must stay out of source control.
 secret_key.txt
 
+# Daily drill-picks history — a local working file the scheduled task rewrites;
+# not part of the app and shouldn't be deployed.
+daily_picks_history.md
+
 # Python / editor cruft
 __pycache__/
 *.pyc
