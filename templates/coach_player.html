@@ -43,6 +43,15 @@
             {% if e.kind == 'drill' %}Completed <strong>{{ e.title }}</strong>{% else %}Logged <strong>{{ e.title }}</strong>{% endif %}
             {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
           </span>
+          {% if e.kind == 'drill' %}
+            <form class="tl-act" method="post" action="{{ url_for('coach_completion_delete', pid=player.id) }}"
+                  onsubmit="return confirm('Reverse this completion? It will no longer count for {{ player.name.split()[0] }}.');">
+              <input type="hidden" name="activity_id" value="{{ e.key.split(':')[0] }}">
+              <input type="hidden" name="done_on" value="{{ e.key.split(':', 1)[1] }}">
+              <input type="hidden" name="next" value="{{ url_for('coach_player', pid=player.id) }}">
+              <button class="link-danger" type="submit">reverse</button>
+            </form>
+          {% endif %}
         </div>
         <div class="tl-notes">
           {% for c in notes %}
@@ -89,15 +98,38 @@
 
 <section class="panel">
   <h2>Self-logged activities ({{ logs|length }})</h2>
-  {% if not logs %}<p class="empty small">Nothing logged on their own yet.</p>{% endif %}
-  <table class="tbl">
+  {% if not logs %}<p class="empty small">Nothing logged on their own yet.</p>
+  {% else %}<p class="muted">Tap one to edit it, or remove it.</p>{% endif %}
+  <div class="loglist">
     {% for l in logs %}
-      <tr>
-        <td>{{ (SECTIONS | selectattr('slug','equalto',l.section) | map(attribute='emoji') | first) if l.section else '📝' }}</td>
-        <td>{{ l.title }}</td>
-        <td class="muted">{{ l.logged_on | nicedate }}</td>
-      </tr>
+      <div class="logrow">
+        <details class="logedit">
+          <summary>
+            <span class="logrow-ic">{{ (SECTIONS | selectattr('slug','equalto',l.section) | map(attribute='emoji') | first) if l.section else '📝' }}</span>
+            <span class="logrow-title">{{ l.title }}</span>
+            <span class="logrow-date muted">{{ l.logged_on | nicedate }}</span>
+            <span class="editcue">✎ edit</span>
+          </summary>
+          <form class="editform" method="post" action="{{ url_for('coach_log_update', pid=player.id, lid=l.id) }}">
+            <label>Activity <input name="title" value="{{ l.title }}" required></label>
+            <div class="row2">
+              <label>Type
+                <select name="section">
+                  <option value="">— none —</option>
+                  {% for s in SECTIONS %}<option value="{{ s.slug }}" {{ 'selected' if s.slug == l.section else '' }}>{{ s.emoji }} {{ s.name }}</option>{% endfor %}
+                </select>
+              </label>
+              <label>Date <input name="logged_on" type="date" value="{{ l.logged_on }}"></label>
+            </div>
+            <button class="btn small" type="submit">Save changes</button>
+          </form>
+        </details>
+        <form class="logdel" method="post" action="{{ url_for('coach_log_delete', pid=player.id, lid=l.id) }}"
+              onsubmit="return confirm('Delete this entry?');">
+          <button class="link-danger" type="submit">delete</button>
+        </form>
+      </div>
     {% endfor %}
-  </table>
+  </div>
 </section>
 {% endblock %}

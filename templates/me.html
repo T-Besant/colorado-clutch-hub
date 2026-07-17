@@ -46,33 +46,59 @@
 
 <section class="panel">
   <h2>My logged activities ({{ logs|length }})</h2>
-  {% if not logs %}<p class="empty small">Nothing yet — log your first one above!</p>{% endif %}
-  <table class="tbl">
+  {% if not logs %}<p class="empty small">Nothing yet — log your first one above!</p>
+  {% else %}<p class="muted">Tap one to edit it, or remove it.</p>{% endif %}
+  <div class="loglist">
     {% for l in logs %}
-      <tr>
-        <td>{{ (SECTIONS | selectattr('slug','equalto',l.section) | map(attribute='emoji') | first) if l.section else '📝' }}</td>
-        <td>{{ l.title }}</td>
-        <td class="muted">{{ l.logged_on | nicedate }}</td>
-        <td>
-          <form method="post" action="{{ url_for('me_log_delete', lid=l.id) }}"
-                onsubmit="return confirm('Remove this?');">
-            <button class="link-danger" type="submit">remove</button>
+      <div class="logrow">
+        <details class="logedit">
+          <summary>
+            <span class="logrow-ic">{{ (SECTIONS | selectattr('slug','equalto',l.section) | map(attribute='emoji') | first) if l.section else '📝' }}</span>
+            <span class="logrow-title">{{ l.title }}</span>
+            <span class="logrow-date muted">{{ l.logged_on | nicedate }}</span>
+            <span class="editcue">✎ edit</span>
+          </summary>
+          <form class="editform" method="post" action="{{ url_for('me_log_update', lid=l.id) }}">
+            <label>What did you do? <input name="title" value="{{ l.title }}" required></label>
+            <div class="row2">
+              <label>Type
+                <select name="section">
+                  <option value="">— none —</option>
+                  {% for s in SECTIONS %}<option value="{{ s.slug }}" {{ 'selected' if s.slug == l.section else '' }}>{{ s.emoji }} {{ s.name }}</option>{% endfor %}
+                </select>
+              </label>
+              <label>Date <input name="logged_on" type="date" value="{{ l.logged_on }}" max="{{ today }}"></label>
+            </div>
+            <button class="btn small" type="submit">Save changes</button>
           </form>
-        </td>
-      </tr>
+        </details>
+        <form class="logdel" method="post" action="{{ url_for('me_log_delete', lid=l.id) }}"
+              onsubmit="return confirm('Remove this?');">
+          <button class="link-danger" type="submit">remove</button>
+        </form>
+      </div>
     {% endfor %}
-  </table>
+  </div>
 </section>
 
 <section class="panel">
   <h2>Coach drills I've checked off ({{ recent|length }}{{ '+' if recent|length == 10 else '' }})</h2>
-  {% if not recent %}<p class="empty small">None yet — head to the sections and mark some done.</p>{% endif %}
+  {% if not recent %}<p class="empty small">None yet — head to the sections and mark some done.</p>
+  {% else %}<p class="muted">Marked one by mistake? Undo it here (or on the drill itself).</p>{% endif %}
   <table class="tbl">
     {% for r in recent %}
       <tr>
         <td>{{ SECTIONS | selectattr('slug','equalto',r.section) | map(attribute='emoji') | first }}</td>
         <td>{{ r.title }}</td>
         <td class="muted">{{ r.done_at | nicedate }}</td>
+        <td>
+          <form method="post" action="{{ url_for('me_completion_undo') }}"
+                onsubmit="return confirm('Mark this not done?');">
+            <input type="hidden" name="activity_id" value="{{ r.activity_id }}">
+            <input type="hidden" name="done_on" value="{{ r.done_on }}">
+            <button class="link-danger" type="submit">undo</button>
+          </form>
+        </td>
       </tr>
     {% endfor %}
   </table>

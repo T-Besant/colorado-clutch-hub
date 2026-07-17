@@ -608,7 +608,7 @@ def me():
         (p["id"],),
     ).fetchall()
     recent = db.execute(
-        """SELECT a.title, a.section, c.done_at
+        """SELECT a.title, a.section, c.done_at, c.activity_id, c.done_on
              FROM completions c JOIN activities a ON a.id=c.activity_id
             WHERE c.player_id=? ORDER BY c.done_at DESC LIMIT 10""",
         (p["id"],),
@@ -669,6 +669,54 @@ def me_log_delete(lid):
     )
     get_db().commit()
     flash("Removed.", "ok")
+    return redirect(url_for("me"))
+
+
+def _clean_log_fields():
+    """Validate title/section/date from a log form. Returns (title, sec, when)."""
+    title = (request.form.get("title") or "").strip()
+    sec = request.form.get("section") or None
+    if sec not in SECTION_BY_SLUG:
+        sec = None
+    when = (request.form.get("logged_on") or "").strip() or date.today().isoformat()
+    try:
+        date.fromisoformat(when)
+    except ValueError:
+        when = date.today().isoformat()
+    return title, sec, when
+
+
+@app.route("/me/log/<int:lid>/update", methods=["POST"])
+@player_required
+def me_log_update(lid):
+    p = current_player()
+    title, sec, when = _clean_log_fields()
+    if not title:
+        flash("Give your activity a name.", "error")
+        return redirect(url_for("me"))
+    get_db().execute(
+        "UPDATE personal_logs SET title=?, section=?, logged_on=? WHERE id=? AND player_id=?",
+        (title, sec, when, lid, p["id"]),
+    )
+    get_db().commit()
+    flash("Activity updated.", "ok")
+    return redirect(url_for("me"))
+
+
+@app.route("/me/completion/undo", methods=["POST"])
+@player_required
+def me_completion_undo():
+    """A player reverses their own completion of a coach drill (any day)."""
+    p = current_player()
+    aid = request.form.get("activity_id", type=int)
+    don = (request.form.get("done_on") or "").strip()
+    if aid and don:
+        get_db().execute(
+            "DELETE FROM completions WHERE activity_id=? AND player_id=? AND done_on=?",
+            (aid, p["id"], don),
+        )
+        get_db().commit()
+        flash("Marked not done.", "ok")
     return redirect(url_for("me"))
 
 
@@ -956,6 +1004,47 @@ def coach_comment_delete(cid):
     get_db().commit()
     flash("Note removed.", "ok")
     return redirect(request.form.get("next") or url_for("coach_home"))
+
+
+@app.route("/coach/player/<int:pid>/log/<int:lid>/update", methods=["POST"])
+@coach_required
+def coach_log_update(pid, lid):
+    title, sec, when = _clean_log_fields()
+    if not title:
+        flash("Give the activity a name.", "error")
+        return redirect(url_for("coach_player", pid=pid))
+    get_db().execute(
+        "UPDATE personal_logs SET title=?, section=?, logged_on=? WHERE id=? AND player_id=?",
+        (title, sec, when, lid, pid),
+    )
+    get_db().commit()
+    flash("Entry updated.", "ok")
+    return redirect(url_for("coach_player", pid=pid))
+
+
+@app.route("/coach/player/<int:pid>/log/<int:lid>/delete", methods=["POST"])
+@coach_required
+def coach_log_delete(pid, lid):
+    get_db().execute("DELETE FROM personal_logs WHERE id=? AND player_id=?", (lid, pid))
+    get_db().commit()
+    flash("Entry deleted.", "ok")
+    return redirect(url_for("coach_player", pid=pid))
+
+
+@app.route("/coach/player/<int:pid>/completion/delete", methods=["POST"])
+@coach_required
+def coach_completion_delete(pid):
+    """Coach reverses a player's completion of a coach drill (any day)."""
+    aid = request.form.get("activity_id", type=int)
+    don = (request.form.get("done_on") or "").strip()
+    if aid and don:
+        get_db().execute(
+            "DELETE FROM completions WHERE activity_id=? AND player_id=? AND done_on=?",
+            (aid, pid, don),
+        )
+        get_db().commit()
+        flash("Completion reversed.", "ok")
+    return redirect(request.form.get("next") or url_for("coach_player", pid=pid))
 
 
 @app.route("/coach/player/<int:pid>/export.csv")

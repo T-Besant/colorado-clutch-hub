@@ -53,6 +53,26 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .back:hover { color: var(--blue); }
 .emoji { font-size: 1.05em; }
 
+/* Editable / deletable log rows (My Page + coach player page) */
+.loglist { margin-top: 6px; }
+.logrow { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.logrow:last-child { border-bottom: 0; }
+.logedit { flex: 1; min-width: 0; }
+.logedit > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.logedit > summary::-webkit-details-marker { display: none; }
+.logrow-ic { flex: none; }
+.logrow-title { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logrow-date { flex: none; font-size: .82rem; }
+.editcue { flex: none; margin-left: auto; font-size: .78rem; color: var(--blue); font-weight: 600; }
+.logedit[open] > summary .editcue::after { content: " ▾"; }
+.editform { margin: 8px 0 4px; padding: 12px; background: #f7fafd; border: 1px solid var(--line); border-radius: 10px; }
+.editform label { margin: 6px 0; }
+.editform .btn { margin-top: 8px; }
+.logdel { flex: none; margin: 0; }
+
+/* Reverse-completion button in the coach timeline */
+.tl-act { flex: none; margin: 0 0 0 auto; }
+
 /* "Log your own activity" reminder on section pages */
 .selfnote {
   background: var(--tint); border: 1px solid #cfe3f4; border-radius: 10px;
