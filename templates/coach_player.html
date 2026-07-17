@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ player.name }} — Coach — Colorado Clutch{% endblock %}
+{% block title %}{{ player.name }} — Coach — {{ TEAM_SHORT }}{% endblock %}
 {% block body %}
 <a class="back" href="{{ url_for('coach_home') }}">← Coach dashboard</a>
 <div class="coachhead">

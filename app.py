@@ -65,6 +65,15 @@ SECTIONS = [
 ]
 SECTION_BY_SLUG = {s["slug"]: s for s in SECTIONS}
 
+# ---------------------------------------------------------------------------
+# TEAM BRANDING — change these three lines to make this hub your own team's.
+# (Also swap static/logo.png + static/logo.svg for your logo, and the colors
+#  in the :root block at the top of static/style.css.)
+# ---------------------------------------------------------------------------
+TEAM_NAME = "2027 Colorado Clutch"     # big name in the header
+TEAM_SUBTITLE = "13U Training Hub"      # small line under the name
+TEAM_SHORT = "Colorado Clutch"         # short name used in browser tab titles
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = _secret_key()
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -249,6 +258,9 @@ def embed_for(url):
 
 app.jinja_env.globals["embed_for"] = embed_for
 app.jinja_env.globals["SECTIONS"] = SECTIONS
+app.jinja_env.globals["TEAM_NAME"] = TEAM_NAME
+app.jinja_env.globals["TEAM_SUBTITLE"] = TEAM_SUBTITLE
+app.jinja_env.globals["TEAM_SHORT"] = TEAM_SHORT
 
 
 @app.template_filter("nicedate")

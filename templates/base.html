@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}2027 Colorado Clutch 13U Training Hub{% endblock %}</title>
+  <title>{% block title %}{{ TEAM_NAME }} {{ TEAM_SUBTITLE }}{% endblock %}</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -18,8 +18,8 @@
     <a class="brand" href="{{ url_for('home') }}">
       <img class="logo" src="{{ url_for('static', filename='logo.png') }}"
            onerror="this.onerror=null;this.src='{{ url_for('static', filename='logo.svg') }}'"
-           alt="Colorado Clutch logo">
-      <span class="brandtext">2027 Colorado Clutch<span class="brandsub">13U Training Hub</span></span>
+           alt="{{ TEAM_SHORT }} logo">
+      <span class="brandtext">{{ TEAM_NAME }}<span class="brandsub">{{ TEAM_SUBTITLE }}</span></span>
     </a>
     <nav>
       {% set me = current_player() %}
@@ -49,6 +49,6 @@
     {% block body %}{% endblock %}
   </main>
 
-  <footer class="foot">Colorado Clutch · 13U · 2027</footer>
+  <footer class="foot">{{ TEAM_NAME }} · {{ TEAM_SUBTITLE }}</footer>
 </body>
 </html>

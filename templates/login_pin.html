@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ player.name }} — Colorado Clutch{% endblock %}
+{% block title %}{{ player.name }} — {{ TEAM_SHORT }}{% endblock %}
 {% block body %}
 <a class="back" href="{{ url_for('login', next=next) }}">← Not you?</a>
 <h1>{{ player.name.split()[0] }}</h1>

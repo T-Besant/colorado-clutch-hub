@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ section.name }} — Colorado Clutch{% endblock %}
+{% block title %}{{ section.name }} — {{ TEAM_SHORT }}{% endblock %}
 {% block body %}
 <a class="back" href="{{ url_for('home') }}">← All sections</a>
 <h1><img class="h1icon" src="{{ url_for('static', filename='icons/' ~ section.slug ~ '.svg') }}" alt="" width="26" height="26"> {{ section.name }}</h1>
