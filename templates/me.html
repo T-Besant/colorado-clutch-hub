@@ -10,8 +10,10 @@
   <div class="stat"><span class="num">{{ stats.active_days }}</span><span class="lbl">Active days</span></div>
 </div>
 <p class="todaynote {{ 'good' if stats.did_today else 'warn' }}">
-  {% if stats.did_today %}You've logged activity today — your streak is safe.{% else %}No activity logged today yet. Complete one drill to keep your streak going.{% endif %}
+  {% if stats.did_today %}You've logged activity today — your streak is safe.{% else %}No activity logged today yet — your streak allows one rest day a week, so don't let it slip two days in a row.{% endif %}
 </p>
+
+{% include "_badges.html" %}
 
 {% if notes %}
 <section class="panel coachfb">

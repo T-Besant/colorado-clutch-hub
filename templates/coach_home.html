@@ -7,6 +7,37 @@
 </div>
 
 <section class="panel">
+  <h2>📣 Team announcement</h2>
+  <p class="muted">Shows at the top of the home page for everyone.</p>
+  <form method="post" action="{{ url_for('coach_announce') }}">
+    <textarea name="announcement" rows="2" placeholder="e.g. Practice moved to 5pm Thursday — bring cleats.">{{ announcement or '' }}</textarea>
+    <button class="btn small" type="submit">{{ 'Update' if announcement else 'Post' }} announcement</button>
+  </form>
+  {% if announcement %}
+    <form method="post" action="{{ url_for('coach_announce') }}" class="clearann">
+      <button class="link-danger" type="submit">Clear announcement</button>
+    </form>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Needs a nudge ({{ slipping|length }})</h2>
+  {% if not slipping %}
+    <p class="empty small">Everyone's trained in the last couple days. 🙌</p>
+  {% else %}
+    <p class="muted">No activity in 3+ days — a quick text might help.</p>
+    <ul class="rosterlist">
+      {% for s in slipping %}
+        <li>
+          <span><a href="{{ url_for('coach_player', pid=s.id) }}">{{ s.name }}</a></span>
+          <span class="muted">{% if s.days is none %}never active{% else %}{{ s.days }} days ago{% endif %}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+
+<section class="panel">
   <h2>Post a drill</h2>
   <form method="post" action="{{ url_for('activity_new') }}">
     <label>Section
@@ -75,6 +106,12 @@
       </tr>
     {% endfor %}
   </table>
+</section>
+
+<section class="panel">
+  <h2>Backup</h2>
+  <p class="muted">Download a copy of everything — roster, drills, and all activity. Keep it somewhere safe; it's your season's data if the host ever has a bad day.</p>
+  <a class="btn small" href="{{ url_for('coach_backup') }}">Download backup</a>
 </section>
 
 <section class="panel">

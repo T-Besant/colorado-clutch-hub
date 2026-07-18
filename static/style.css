@@ -53,6 +53,29 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .back:hover { color: var(--blue); }
 .emoji { font-size: 1.05em; }
 
+/* Team announcement banner (home page) */
+.announce {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #fff7e0; border: 1px solid #f0d99a; border-left: 4px solid var(--gold);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+}
+.announce-ic { flex: none; font-size: 1.1rem; }
+.announce-body { font-weight: 600; color: #4a3a12; white-space: pre-wrap; }
+.clearann { margin-top: 8px; }
+
+/* Badges */
+.badgecount { font-size: .82rem; font-weight: 700; color: var(--muted); }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 8px; }
+.badge-item {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px;
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 8px; background: #fff;
+}
+.badge-item.earned { border-color: #f2d488; background: #fffdf5; }
+.badge-item.locked { opacity: .55; filter: grayscale(1); }
+.badge-emoji { font-size: 1.7rem; line-height: 1; }
+.badge-name { font-weight: 700; font-size: .84rem; }
+.badge-desc { font-size: .72rem; color: var(--muted); line-height: 1.2; }
+
 /* Editable / deletable log rows (My Page + coach player page) */
 .loglist { margin-top: 6px; }
 .logrow { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }

@@ -12,6 +12,8 @@
   <div class="stat"><span class="num">{{ stats.active_days }}</span><span class="lbl">Active days</span></div>
 </div>
 
+{% include "_badges.html" %}
+
 <section class="panel">
   <h2>Recent activity</h2>
   {% if not feed %}<p class="empty small">No activity yet.</p>{% endif %}

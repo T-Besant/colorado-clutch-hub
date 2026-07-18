@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block body %}
+{% if announcement %}
+  <div class="announce">
+    <span class="announce-ic">📣</span>
+    <span class="announce-body">{{ announcement }}</span>
+  </div>
+{% endif %}
 {% set me = current_player() %}
 {% if me and stats %}
   <div class="mebanner">

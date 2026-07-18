@@ -356,22 +356,77 @@ def _drill_streak(activity_id, pid):
     return _streak(dates)
 
 
+GRACE_WINDOW = 7  # one forgiven "rest day" per rolling 7-day window
+
+
+def _streak_ending(dates, end):
+    """Active days in the chain ending at `end`, allowing a single skipped day
+    per rolling week (one rest day) so it doesn't reset on one missed day.
+    Two missed days in a row always ends the chain."""
+    if not dates:
+        return 0
+    floor = min(dates) - timedelta(days=GRACE_WINDOW + 1)
+    count = 0
+    grace_days = []
+    d = end
+    while d >= floor:
+        if d in dates:
+            count += 1
+            d -= timedelta(days=1)
+        else:
+            # only forgive a skip if we haven't already skipped within a week
+            if any((g - d).days < GRACE_WINDOW for g in grace_days):
+                break
+            grace_days.append(d)
+            d -= timedelta(days=1)
+    return count
+
+
 def _streak(dates):
-    """Current consecutive-day streak ending today or yesterday."""
+    """Current day-streak ending today or yesterday, with one forgiven rest day
+    per rolling week (a single missed day won't reset it)."""
     if not dates:
         return 0
     today = date.today()
     if today in dates:
-        cursor = today
+        anchor = today
     elif (today - timedelta(days=1)) in dates:
-        cursor = today - timedelta(days=1)
+        anchor = today - timedelta(days=1)
     else:
         return 0
-    n = 0
-    while cursor in dates:
-        n += 1
-        cursor -= timedelta(days=1)
-    return n
+    return _streak_ending(dates, anchor)
+
+
+def _longest_streak(dates):
+    """Longest graced streak anywhere in history (used for badges)."""
+    return max((_streak_ending(dates, end) for end in dates), default=0)
+
+
+def _sections_touched(pid):
+    """Set of section slugs this player has any activity in."""
+    db = get_db()
+    secs = set()
+    for r in db.execute(
+        "SELECT DISTINCT a.section s FROM completions c JOIN activities a "
+        "ON a.id=c.activity_id WHERE c.player_id=?", (pid,)):
+        if r["s"]:
+            secs.add(r["s"])
+    for r in db.execute(
+        "SELECT DISTINCT section s FROM personal_logs WHERE player_id=? AND section IS NOT NULL",
+        (pid,)):
+        if r["s"]:
+            secs.add(r["s"])
+    return secs
+
+
+def _max_days_in_week(dates):
+    """Most active days within any rolling 7-day window."""
+    ds = sorted(dates)
+    best = 0
+    for start in ds:
+        end = start + timedelta(days=6)
+        best = max(best, sum(1 for d in ds if start <= d <= end))
+    return best
 
 
 def player_stats(pid):
@@ -402,6 +457,39 @@ def player_stats(pid):
     }
 
 
+# Badges are computed on the fly from history (no table) so they never un-earn.
+BADGES = [
+    {"emoji": "🌱", "name": "First Rep",    "desc": "Log your first activity",   "test": lambda c: c["total"] >= 1},
+    {"emoji": "⭐", "name": "Perfect Ten",  "desc": "10 total activities",        "test": lambda c: c["total"] >= 10},
+    {"emoji": "🏅", "name": "Fifty Club",   "desc": "50 total activities",        "test": lambda c: c["total"] >= 50},
+    {"emoji": "💯", "name": "Century",      "desc": "100 total activities",       "test": lambda c: c["total"] >= 100},
+    {"emoji": "🔥", "name": "On Fire",      "desc": "3-day streak",               "test": lambda c: c["longest"] >= 3},
+    {"emoji": "⚡", "name": "Week Strong",  "desc": "7-day streak",               "test": lambda c: c["longest"] >= 7},
+    {"emoji": "🚀", "name": "Locked In",    "desc": "14-day streak",              "test": lambda c: c["longest"] >= 14},
+    {"emoji": "👑", "name": "Unstoppable",  "desc": "30-day streak",              "test": lambda c: c["longest"] >= 30},
+    {"emoji": "🎯", "name": "All-Rounder",  "desc": "Train in all 6 sections",    "test": lambda c: c["sections"] >= 6},
+    {"emoji": "💪", "name": "Week Warrior", "desc": "Train 5 days in one week",   "test": lambda c: c["week_max"] >= 5},
+]
+
+
+def player_badges(pid):
+    """List of badges with an `earned` flag, computed from this player's history."""
+    dates = _activity_dates(pid)
+    db = get_db()
+    total = db.execute(
+        "SELECT (SELECT COUNT(*) FROM completions WHERE player_id=?) "
+        "+ (SELECT COUNT(*) FROM personal_logs WHERE player_id=?) n", (pid, pid)
+    ).fetchone()["n"]
+    ctx = {
+        "total": total,
+        "longest": _longest_streak(dates),
+        "sections": len(_sections_touched(pid)),
+        "week_max": _max_days_in_week(dates),
+    }
+    return [{"emoji": b["emoji"], "name": b["name"], "desc": b["desc"],
+             "earned": b["test"](ctx)} for b in BADGES]
+
+
 # ---------------------------------------------------------------------------
 # Player-facing routes
 # ---------------------------------------------------------------------------
@@ -428,6 +516,8 @@ def home():
     return render_template(
         "home.html", counts=counts, stats=stats,
         board=board, my_id=(me["id"] if me else None),
+        announcement=get_setting("announcement"),
+        announcement_at=get_setting("announcement_at"),
     )
 
 
@@ -631,7 +721,7 @@ def me():
         db.commit()
     return render_template(
         "me.html", player=p, stats=stats, logs=logs, recent=recent, notes=notes,
-        today=date.today().isoformat()
+        badges=player_badges(p["id"]), today=date.today().isoformat()
     )
 
 
@@ -766,6 +856,7 @@ def player_profile(pid):
         player=player,
         stats=player_stats(pid),
         feed=_player_feed(pid, limit=60),
+        badges=player_badges(pid),
         is_me=(me is not None and me["id"] == pid),
     )
 
@@ -824,9 +915,73 @@ def coach_home():
         "SELECT activity_id, COUNT(*) n FROM completions GROUP BY activity_id"
     ):
         comp[r["activity_id"]] = r["n"]
+    # "Who's slipping" — active players with no activity in 3+ days (or never).
+    today = date.today()
+    slipping = []
+    for p in players:
+        last = db.execute(
+            "SELECT MAX(d) m FROM ("
+            "  SELECT done_on d FROM completions WHERE player_id=?"
+            "  UNION ALL SELECT logged_on FROM personal_logs WHERE player_id=?)",
+            (p["id"], p["id"]),
+        ).fetchone()["m"]
+        days = (today - date.fromisoformat(last[:10])).days if last else None
+        if days is None or days >= 3:
+            slipping.append({"id": p["id"], "name": p["name"], "last": last, "days": days})
+    slipping.sort(key=lambda x: x["days"] if x["days"] is not None else 9999, reverse=True)
     return render_template(
-        "coach_home.html", players=players, activities=activities, comp=comp
+        "coach_home.html", players=players, activities=activities, comp=comp,
+        slipping=slipping, announcement=get_setting("announcement"),
     )
+
+
+@app.route("/coach/backup")
+@coach_required
+def coach_backup():
+    """Download a consistent snapshot of the whole database (all data)."""
+    import tempfile
+    src = sqlite3.connect(DB_PATH)
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    try:
+        dst = sqlite3.connect(path)
+        with dst:
+            src.backup(dst)
+        dst.close()
+        with open(path, "rb") as f:
+            data = f.read()
+    finally:
+        src.close()
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    slug = "".join(ch for ch in TEAM_SHORT.lower() if ch.isalnum()) or "team"
+    fname = f"{slug}_backup_{date.today().isoformat()}.db"
+    return Response(
+        data, mimetype="application/x-sqlite3",
+        headers={"Content-Disposition": f"attachment; filename={fname}"},
+    )
+
+
+@app.route("/coach/announce", methods=["POST"])
+@coach_required
+def coach_announce():
+    """Post or clear the team announcement shown on the home page."""
+    msg = (request.form.get("announcement") or "").strip()
+    db = get_db()
+    if msg:
+        now = datetime.now().isoformat(timespec="seconds")
+        db.execute("INSERT INTO settings(key,value) VALUES('announcement',?) "
+                   "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (msg,))
+        db.execute("INSERT INTO settings(key,value) VALUES('announcement_at',?) "
+                   "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (now,))
+        flash("Announcement posted.", "ok")
+    else:
+        db.execute("DELETE FROM settings WHERE key IN ('announcement','announcement_at')")
+        flash("Announcement cleared.", "ok")
+    db.commit()
+    return redirect(url_for("coach_home"))
 
 
 @app.route("/coach/activity/new", methods=["POST"])
@@ -969,7 +1124,7 @@ def coach_player(pid):
     ).fetchall()
     return render_template(
         "coach_player.html", player=player, stats=stats, drills=drills, logs=logs,
-        feed=feed, comments=_comments_for(pid),
+        feed=feed, comments=_comments_for(pid), badges=player_badges(pid),
     )
 
 

@@ -29,6 +29,8 @@
   {% if stats.did_today %}Trained today.{% else %}No activity logged today.{% endif %}
 </p>
 
+{% include "_badges.html" %}
+
 <section class="panel">
   <h2>Recent activity</h2>
   <p class="muted">Drop a note on any item so {{ player.name.split()[0] }} knows you're watching their work — they'll see it on their page.</p>
