@@ -63,6 +63,26 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .announce-body { font-weight: 600; color: #4a3a12; white-space: pre-wrap; }
 .clearann { margin-top: 8px; }
 
+/* Speed & Agility daily-bonus messaging */
+.bonusbanner {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: linear-gradient(90deg, #fff7e0, #eaf4fb);
+  border: 1px solid #f0d99a; border-left: 4px solid var(--gold);
+  border-radius: 12px; padding: 12px 16px; margin: 0 0 16px; color: #3d3410;
+}
+.bonusbanner.earned { background: #eaf6ee; border-color: #b6e0ba; border-left-color: var(--grass); color: #1c5222; }
+.bonusbanner .bonus-ic { flex: none; font-size: 1.2rem; }
+.bonusbadge {
+  display: inline-block; background: var(--gold); color: #4a3a00;
+  border-radius: 999px; padding: 1px 9px; font-size: .68rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .03em;
+}
+.bonusnote {
+  border: 1px solid #f0d99a; border-left: 3px solid var(--gold); border-radius: 10px;
+  padding: 10px 14px; margin: 10px 0 0; font-weight: 500; color: #4a3a12; background: #fffdf5;
+}
+.bonusnote.earned { border-color: #b6e0ba; border-left-color: var(--grass); color: #1c5222; background: #f2fbf4; }
+
 /* Badges */
 .badgecount { font-size: .82rem; font-weight: 700; color: var(--muted); }
 .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 8px; }

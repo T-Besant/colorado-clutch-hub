@@ -4,11 +4,17 @@
 <h1>{{ player.name.split()[0] }}'s Page</h1>
 
 <div class="stats stats4">
-  <div class="stat"><span class="num">{{ stats.total }}</span><span class="lbl">Activities</span></div>
+  <div class="stat"><span class="num">{{ stats.total }}</span><span class="lbl">Points</span></div>
   <div class="stat"><span class="num">🔥 {{ stats.streak }}</span><span class="lbl">Day streak</span></div>
+  <div class="stat"><span class="num">⚡ {{ stats.bonus }}</span><span class="lbl">Bonus</span></div>
   <div class="stat"><span class="num">{{ stats.week }}</span><span class="lbl">This week</span></div>
-  <div class="stat"><span class="num">{{ stats.active_days }}</span><span class="lbl">Active days</span></div>
 </div>
+{% if BONUS_SECTION %}
+  <p class="bonusnote {{ 'earned' if stats.bonus_today else '' }}">
+    ⚡ <strong>{{ BONUS_SECTION_NAME }} focus:</strong>
+    {% if stats.bonus_today %}bonus point earned today — nice!{% else %}do a {{ BONUS_SECTION_NAME }} activity today for a bonus point.{% endif %}
+  </p>
+{% endif %}
 <p class="todaynote {{ 'good' if stats.did_today else 'warn' }}">
   {% if stats.did_today %}You've logged activity today — your streak is safe.{% else %}No activity logged today yet — your streak allows one rest day a week, so don't let it slip two days in a row.{% endif %}
 </p>

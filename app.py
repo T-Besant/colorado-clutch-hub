@@ -74,6 +74,11 @@ TEAM_NAME = "2027 Colorado Clutch"     # big name in the header
 TEAM_SUBTITLE = "13U Training Hub"      # small line under the name
 TEAM_SHORT = "Colorado Clutch"         # short name used in browser tab titles
 
+# Daily bonus: the first activity a player does in this section each day earns
+# +1 bonus point (fall/winter Speed & Agility focus). Set to None to disable.
+BONUS_SECTION = "speed-agility"
+BONUS_SECTION_NAME = next((s["name"] for s in SECTIONS if s["slug"] == BONUS_SECTION), "")
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = _secret_key()
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -261,6 +266,9 @@ app.jinja_env.globals["SECTIONS"] = SECTIONS
 app.jinja_env.globals["TEAM_NAME"] = TEAM_NAME
 app.jinja_env.globals["TEAM_SUBTITLE"] = TEAM_SUBTITLE
 app.jinja_env.globals["TEAM_SHORT"] = TEAM_SHORT
+app.jinja_env.globals["BONUS_SECTION"] = BONUS_SECTION
+app.jinja_env.globals["BONUS_SECTION_NAME"] = (
+    SECTION_BY_SLUG[BONUS_SECTION]["name"] if BONUS_SECTION in SECTION_BY_SLUG else "")
 
 
 @app.template_filter("nicedate")
@@ -429,6 +437,41 @@ def _max_days_in_week(dates):
     return best
 
 
+def _bonus_points(pid):
+    """+1 for each day the player did any activity in BONUS_SECTION (one bonus
+    per day = 'first speed & agility drill of the day')."""
+    if not BONUS_SECTION:
+        return 0
+    db = get_db()
+    days = set()
+    for r in db.execute(
+        "SELECT DISTINCT c.done_on d FROM completions c JOIN activities a "
+        "ON a.id=c.activity_id WHERE c.player_id=? AND a.section=?",
+        (pid, BONUS_SECTION)):
+        days.add(r["d"])
+    for r in db.execute(
+        "SELECT DISTINCT logged_on d FROM personal_logs WHERE player_id=? AND section=?",
+        (pid, BONUS_SECTION)):
+        days.add(r["d"])
+    return len(days)
+
+
+def _bonus_today_count(pid):
+    """How many BONUS_SECTION activities the player has done today."""
+    if not BONUS_SECTION:
+        return 0
+    today = date.today().isoformat()
+    db = get_db()
+    c = db.execute(
+        "SELECT COUNT(*) n FROM completions c JOIN activities a ON a.id=c.activity_id "
+        "WHERE c.player_id=? AND a.section=? AND c.done_on=?",
+        (pid, BONUS_SECTION, today)).fetchone()["n"]
+    l = db.execute(
+        "SELECT COUNT(*) n FROM personal_logs WHERE player_id=? AND section=? AND logged_on=?",
+        (pid, BONUS_SECTION, today)).fetchone()["n"]
+    return c + l
+
+
 def player_stats(pid):
     db = get_db()
     drills = db.execute(
@@ -446,13 +489,17 @@ def player_stats(pid):
         "SELECT COUNT(*) n FROM personal_logs WHERE player_id=? AND logged_on>=?",
         (pid, week_start),
     ).fetchone()["n"]
+    bonus = _bonus_points(pid)
     return {
         "drills": drills,
         "personal": personal,
-        "total": drills + personal,
+        "activities": drills + personal,
+        "bonus": bonus,
+        "total": drills + personal + bonus,   # the score (activities + bonus)
         "streak": _streak(dates),
         "active_days": len(dates),
         "did_today": date.today() in dates,
+        "bonus_today": _bonus_today_count(pid) > 0,
         "week": week,
     }
 
@@ -564,6 +611,8 @@ def section(slug):
     selected = None
     if activities:
         selected = next((a for a in activities if a["id"] == sel), activities[0])
+    is_bonus = (slug == BONUS_SECTION)
+    bonus_earned_today = bool(me and is_bonus and _bonus_today_count(me["id"]) > 0)
     return render_template(
         "section.html",
         section=SECTION_BY_SLUG[slug],
@@ -572,6 +621,8 @@ def section(slug):
         done=done,
         mine=mine,
         selected=selected,
+        is_bonus=is_bonus,
+        bonus_earned_today=bonus_earned_today,
     )
 
 
@@ -586,7 +637,7 @@ def toggle():
     if not activity_id:
         abort(400)
     db = get_db()
-    act = db.execute("SELECT repeatable FROM activities WHERE id=?", (activity_id,)).fetchone()
+    act = db.execute("SELECT repeatable, section FROM activities WHERE id=?", (activity_id,)).fetchone()
     if act is None:
         abort(404)
     today = date.today().isoformat()
@@ -625,6 +676,10 @@ def toggle():
                 (activity_id, me["id"], today, datetime.now().isoformat(timespec="seconds")))
             now_done = True
     db.commit()
+    # Daily bonus: first Speed & Agility activity of the day earns +1.
+    if now_done and BONUS_SECTION and act["section"] == BONUS_SECTION \
+            and _bonus_today_count(me["id"]) == 1:
+        flash(f"⚡ Bonus point! First {BONUS_SECTION_NAME} activity today (+1).", "ok")
     if request.headers.get("X-Requested-With") == "fetch":
         return jsonify(done=now_done)
     return redirect(nxt)
@@ -746,7 +801,12 @@ def me_log():
         (p["id"], title, sec, when, datetime.now().isoformat(timespec="seconds")),
     )
     get_db().commit()
-    flash("Activity logged.", "ok")
+    # Daily bonus if this is their first Speed & Agility activity today.
+    if (BONUS_SECTION and sec == BONUS_SECTION and when == date.today().isoformat()
+            and _bonus_today_count(p["id"]) == 1):
+        flash(f"⚡ Bonus point! First {BONUS_SECTION_NAME} activity today (+1).", "ok")
+    else:
+        flash("Activity logged.", "ok")
     return redirect(url_for("me"))
 
 

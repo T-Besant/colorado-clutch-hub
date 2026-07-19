@@ -2,7 +2,7 @@
 {% block title %}Scoreboard — {{ TEAM_SHORT }}{% endblock %}
 {% block body %}
 <h1>Team Scoreboard</h1>
-<p class="lead">Ranked by total activities completed.</p>
+<p class="lead">Ranked by points — activities completed{% if BONUS_SECTION %} plus ⚡ {{ BONUS_SECTION_NAME }} daily bonuses{% endif %}.</p>
 
 {% if not rows %}
   <p class="empty">No players yet.</p>
@@ -10,7 +10,7 @@
 
 <table class="board">
   <thead>
-    <tr><th>#</th><th>Player</th><th>Done</th><th>Streak</th></tr>
+    <tr><th>#</th><th>Player</th><th>Points</th><th>Streak</th></tr>
   </thead>
   <tbody>
     {% for r in rows %}
@@ -25,5 +25,5 @@
     {% endfor %}
   </tbody>
 </table>
-<p class="hint">“Done” = coach drills you checked off + your own logged activities.</p>
+<p class="hint">“Points” = coach drills you checked off + your own logged activities{% if BONUS_SECTION %} + a ⚡ bonus point for your first {{ BONUS_SECTION_NAME }} activity each day{% endif %}.</p>
 {% endblock %}

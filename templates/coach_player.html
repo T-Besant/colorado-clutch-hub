@@ -20,10 +20,10 @@
 </p>
 
 <div class="stats stats4">
-  <div class="stat"><span class="num">{{ stats.total }}</span><span class="lbl">Activities</span></div>
+  <div class="stat"><span class="num">{{ stats.total }}</span><span class="lbl">Points</span></div>
   <div class="stat"><span class="num">🔥 {{ stats.streak }}</span><span class="lbl">Day streak</span></div>
+  <div class="stat"><span class="num">⚡ {{ stats.bonus }}</span><span class="lbl">Bonus</span></div>
   <div class="stat"><span class="num">{{ stats.week }}</span><span class="lbl">This week</span></div>
-  <div class="stat"><span class="num">{{ stats.active_days }}</span><span class="lbl">Active days</span></div>
 </div>
 <p class="todaynote {{ 'good' if stats.did_today else 'warn' }}">
   {% if stats.did_today %}Trained today.{% else %}No activity logged today.{% endif %}

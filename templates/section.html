@@ -4,6 +4,17 @@
 <a class="back" href="{{ url_for('home') }}">← All sections</a>
 <h1><img class="h1icon" src="{{ url_for('static', filename='icons/' ~ section.slug ~ '.svg') }}" alt="" width="26" height="26"> {{ section.name }}</h1>
 
+{% if is_bonus %}
+  <div class="bonusbanner {{ 'earned' if bonus_earned_today else '' }}">
+    <span class="bonus-ic">⚡</span>
+    <span>
+      {% if current_player() and bonus_earned_today %}<strong>Bonus earned today!</strong> You've got your {{ section.name }} bonus point. Back tomorrow for another.
+      {% elif current_player() %}<strong>Daily bonus available!</strong> Complete your first {{ section.name }} activity today for a <strong>+1 bonus point</strong>.
+      {% else %}<strong>Daily bonus:</strong> your first {{ section.name }} activity each day earns a <strong>+1 bonus point</strong>. Log in to start earning.{% endif %}
+    </span>
+  </div>
+{% endif %}
+
 <p class="selfnote">💡 Doing extra work on your own? You're not limited to what's posted here — <a href="{{ url_for('me') }}">log your own activity</a> and it still counts toward your total and streak.</p>
 
 {% if is_coach() %}

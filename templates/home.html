@@ -32,7 +32,7 @@
       {% if board %}
         <table class="board compact">
           <thead>
-            <tr><th></th><th></th><th class="h-num">Done</th><th class="h-num">Streak</th></tr>
+            <tr><th></th><th></th><th class="h-num">Pts</th><th class="h-num">Streak</th></tr>
           </thead>
           <tbody>
             {% for r in board %}
@@ -62,6 +62,7 @@
         <a class="card" href="{{ url_for('section', slug=s.slug) }}">
           <span class="cardicon"><img src="{{ url_for('static', filename='icons/' ~ s.slug ~ '.svg') }}" alt="" width="26" height="26"></span>
           <span class="cardname">{{ s.name }}</span>
+          {% if s.slug == BONUS_SECTION %}<span class="bonusbadge">⚡ Daily bonus</span>{% endif %}
           <span class="badge">{{ counts[s.slug] }} drill{{ '' if counts[s.slug] == 1 else 's' }}</span>
         </a>
       {% endfor %}
