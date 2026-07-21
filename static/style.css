@@ -78,6 +78,53 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .bd-title { font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; }
 .bd-sub { font-size: .8rem; color: #cfe0ee; }
 .bonusdrill.earned .bd-sub { color: #d7f0dc; }
+
+/* Development focus — coach-set card shown at the top of a player's page */
+.focuscard {
+  background: linear-gradient(180deg, #fffdf5, #fff);
+  border: 1px solid #f0d99a; border-left: 4px solid var(--gold);
+  border-radius: 14px; padding: 14px 16px; margin: 4px 0 18px;
+  box-shadow: var(--shadow);
+}
+.focuscard.isnew { box-shadow: 0 0 0 3px rgba(242,183,5,.18), var(--shadow); }
+.focus-top { display: flex; align-items: flex-start; gap: 12px; }
+.focus-ic { font-size: 1.5rem; flex: none; line-height: 1.2; }
+.focus-main { min-width: 0; }
+.focus-label { margin: 0; font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #a9812a; }
+.focus-new { color: #b9860b; margin-left: 4px; }
+.focus-headline { margin: 2px 0 4px; font-weight: 800; font-size: 1.12rem; letter-spacing: -.01em; color: var(--navy); }
+.focus-sec { display: inline-block; font-size: .78rem; font-weight: 700; color: var(--muted); background: var(--tint); border-radius: 999px; padding: 1px 10px; }
+.focus-details { margin: 8px 0 0; color: var(--ink); white-space: pre-wrap; }
+.focus-meta { margin: 8px 0 0; font-size: .74rem; color: var(--muted); }
+
+.focus-video { margin: 12px 0 4px; }
+
+/* "Log it for a point" nudge on the player's own focus card */
+.focus-log {
+  display: inline-block; margin: 10px 0 2px; cursor: pointer;
+  background: #fff; border: 1px solid #e6c877; color: #8a6d1e;
+  font: inherit; font-weight: 700; font-size: .82rem;
+  border-radius: 999px; padding: 5px 12px;
+}
+.focus-log:hover { background: #fff7e0; }
+
+/* Focus history — collapsible, shown under the current focus */
+.focushist { margin: 4px 0 18px; }
+.focushist > summary { cursor: pointer; font-weight: 700; font-size: .86rem; color: var(--muted); padding: 4px 0; }
+.focushist > summary:hover { color: var(--blue); }
+.fh-list { list-style: none; margin: 6px 0 0; padding: 0; border-left: 2px solid var(--line); }
+.fh-item { padding: 6px 0 6px 12px; margin-left: 2px; }
+.fh-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+.fh-ic { flex: none; }
+.fh-head { font-weight: 700; color: var(--navy); }
+.fh-date { font-size: .76rem; }
+.fh-details { margin: 2px 0 0; font-size: .84rem; white-space: pre-wrap; }
+.fh-del { font-size: .76rem; margin-left: auto; }
+
+/* Coach editor for the focus */
+.focuspanel textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+.focuspanel .unseen { color: var(--gold); font-weight: 700; }
+.focusmanage { gap: 16px; margin-top: 6px; }
 .bd-go { margin-left: auto; flex: none; font-weight: 800; color: var(--gold); }
 .bonusdrill.earned .bd-go { color: #fff; }
 .tag-bonus { color: var(--gold); font-weight: 800; }

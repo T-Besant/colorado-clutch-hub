@@ -12,6 +12,8 @@
   <div class="stat"><span class="num">{{ stats.week }}</span><span class="lbl">This week</span></div>
 </div>
 
+{% with focus_label=player.name.split()[0] ~ "'s focus" %}{% include "_focus.html" %}{% endwith %}
+
 {% include "_badges.html" %}
 
 <section class="panel">

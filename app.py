@@ -166,6 +166,25 @@ def init_db():
             FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
         );
 
+        -- Coach-set "development focus" for a player: a short headline plus
+        -- optional detail and a section tag. Rows accrue over time so a player
+        -- builds a history; exactly one row per player is active=1 (the current
+        -- focus) at a time. `seen` drives the "New from coach" flag, mirroring
+        -- feed_comments.
+        CREATE TABLE IF NOT EXISTS player_focus (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            section   TEXT,
+            headline  TEXT NOT NULL,
+            details   TEXT,
+            video_url TEXT,
+            created   TEXT NOT NULL,
+            updated   TEXT NOT NULL,
+            seen      INTEGER NOT NULL DEFAULT 0,
+            active    INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+        );
+
         -- One row each time a player earns the "bonus drill of the day" (+1).
         -- Recorded when earned so the point survives the coach picking a new
         -- bonus drill later. One award per player per day per drill.
@@ -208,6 +227,10 @@ def init_db():
             ALTER TABLE completions_new RENAME TO completions;
             """
         )
+    # Migration: add the optional focus video to an older player_focus table.
+    fcols = [r[1] for r in db.execute("PRAGMA table_info(player_focus)")]
+    if fcols and "video_url" not in fcols:
+        db.execute("ALTER TABLE player_focus ADD COLUMN video_url TEXT")
     # Default coach PIN on first run.
     if db.execute("SELECT value FROM settings WHERE key='coach_pin'").fetchone() is None:
         db.execute("INSERT INTO settings(key, value) VALUES('coach_pin', ?)", ("1234",))
@@ -336,9 +359,26 @@ def unseen_comments(pid):
     return row["n"] if row else 0
 
 
+def get_focus(pid):
+    """This player's current (active) development focus, or None."""
+    return get_db().execute(
+        "SELECT * FROM player_focus WHERE player_id=? AND active=1 "
+        "ORDER BY id DESC LIMIT 1", (pid,)
+    ).fetchone()
+
+
+def focus_history(pid):
+    """Past (archived) focuses for this player, newest first."""
+    return get_db().execute(
+        "SELECT * FROM player_focus WHERE player_id=? AND active=0 "
+        "ORDER BY id DESC", (pid,)
+    ).fetchall()
+
+
 app.jinja_env.globals["current_player"] = current_player
 app.jinja_env.globals["is_coach"] = lambda: bool(session.get("coach"))
 app.jinja_env.globals["unseen_comments"] = unseen_comments
+app.jinja_env.globals["SECTION_BY_SLUG"] = SECTION_BY_SLUG
 
 
 # ---------------------------------------------------------------------------
@@ -841,9 +881,16 @@ def me():
     if any(not n["seen"] for n in notes):
         db.execute("UPDATE feed_comments SET seen=1 WHERE player_id=? AND seen=0", (p["id"],))
         db.commit()
+    # Development focus — capture unseen state, then mark seen (viewing = read).
+    focus = get_focus(p["id"])
+    focus_new = bool(focus and not focus["seen"])
+    if focus_new:
+        db.execute("UPDATE player_focus SET seen=1 WHERE player_id=?", (p["id"],))
+        db.commit()
     return render_template(
         "me.html", player=p, stats=stats, logs=logs, recent=recent, notes=notes,
-        badges=player_badges(p["id"]), today=date.today().isoformat()
+        badges=player_badges(p["id"]), today=date.today().isoformat(),
+        focus=focus, focus_new=focus_new, focus_history=focus_history(p["id"]),
     )
 
 
@@ -985,6 +1032,7 @@ def player_profile(pid):
         feed=_player_feed(pid, limit=60),
         badges=player_badges(pid),
         is_me=(me is not None and me["id"] == pid),
+        focus=get_focus(pid), focus_history=focus_history(pid),
     )
 
 
@@ -1270,6 +1318,7 @@ def coach_player(pid):
     return render_template(
         "coach_player.html", player=player, stats=stats, drills=drills, logs=logs,
         feed=feed, comments=_comments_for(pid), badges=player_badges(pid),
+        focus=get_focus(pid), focus_history=focus_history(pid),
     )
 
 
@@ -1304,6 +1353,69 @@ def coach_comment_delete(cid):
     get_db().commit()
     flash("Note removed.", "ok")
     return redirect(request.form.get("next") or url_for("coach_home"))
+
+
+@app.route("/coach/player/<int:pid>/focus", methods=["POST"])
+@coach_required
+def coach_focus(pid):
+    """Manage a player's development focus.
+
+    action=save  — edit the current focus in place, or create the first one
+    action=new   — archive the current focus to history, then start fresh
+    action=clear — archive the current focus to history, leaving none active
+    """
+    db = get_db()
+    if not db.execute("SELECT 1 FROM players WHERE id=?", (pid,)).fetchone():
+        abort(404)
+    nxt = request.form.get("next") or url_for("coach_player", pid=pid)
+    action = request.form.get("action", "save")
+    now = datetime.now().isoformat(timespec="seconds")
+    current = get_focus(pid)
+
+    if action in ("new", "clear"):
+        if current:
+            db.execute("UPDATE player_focus SET active=0 WHERE id=?", (current["id"],))
+            db.commit()
+            flash("Previous focus moved to history."
+                  + (" Set the new one below." if action == "new" else ""), "ok")
+        else:
+            flash("No active focus to change.", "error")
+        return redirect(nxt)
+
+    # action == save
+    headline = (request.form.get("headline") or "").strip()
+    details = (request.form.get("details") or "").strip() or None
+    video = (request.form.get("video_url") or "").strip() or None
+    section = request.form.get("section") or None
+    if section not in SECTION_BY_SLUG:
+        section = None
+    if not headline:
+        flash("Give the focus a short headline.", "error")
+        return redirect(nxt)
+    if current:
+        # Edit the current focus in place (tweaks don't spawn history rows).
+        db.execute(
+            "UPDATE player_focus SET section=?, headline=?, details=?, video_url=?, "
+            "updated=?, seen=0 WHERE id=?",
+            (section, headline, details, video, now, current["id"]))
+    else:
+        db.execute(
+            "INSERT INTO player_focus(player_id, section, headline, details, video_url, "
+            "created, updated) VALUES(?,?,?,?,?,?,?)",
+            (pid, section, headline, details, video, now, now))
+    db.commit()
+    flash("Focus saved — the player will see it on their page.", "ok")
+    return redirect(nxt)
+
+
+@app.route("/coach/player/<int:pid>/focus/<int:fid>/delete", methods=["POST"])
+@coach_required
+def coach_focus_delete(pid, fid):
+    """Permanently remove one focus (used to prune a history entry)."""
+    get_db().execute("DELETE FROM player_focus WHERE id=? AND player_id=?", (fid, pid))
+    get_db().commit()
+    flash("Focus removed.", "ok")
+    return redirect(request.form.get("next") or url_for("coach_player", pid=pid))
 
 
 @app.route("/coach/player/<int:pid>/log/<int:lid>/update", methods=["POST"])

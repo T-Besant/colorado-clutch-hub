@@ -1,0 +1,53 @@
+{# Read-only "development focus" card + history. Expects: focus (row or None),
+   focus_history (list), and optionally focus_new (bool), focus_label (heading),
+   focus_can_log (bool — show the "log it for a point" nudge, own page only). #}
+{% if focus or focus_history %}
+<div class="focusblock">
+  {% if focus %}
+  <section class="focuscard{{ ' isnew' if focus_new|default(false) else '' }}">
+    <div class="focus-top">
+      <span class="focus-ic">🎯</span>
+      <div class="focus-main">
+        <p class="focus-label">
+          {{ focus_label|default('Development focus') }}
+          {% if focus_new|default(false) %}<span class="focus-new">✨ New</span>{% endif %}
+        </p>
+        <p class="focus-headline">{{ focus.headline }}</p>
+        {% if focus.section %}
+          {% set s = SECTION_BY_SLUG.get(focus.section) %}
+          {% if s %}<span class="focus-sec">{{ s.emoji }} {{ s.name }}</span>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% if focus.details %}<p class="focus-details">{{ focus.details }}</p>{% endif %}
+    {% if focus.video_url %}<div class="focus-video">{{ embed_for(focus.video_url) }}</div>{% endif %}
+    {% if focus_can_log|default(false) %}
+      <button type="button" class="focus-log" onclick="prefillFocusLog(this)"
+              data-title="{{ focus.headline }}" data-section="{{ focus.section or '' }}">
+        ✅ Worked on this? Log it below to earn a point ↓
+      </button>
+    {% endif %}
+    <p class="focus-meta">Set by Coach · updated {{ focus.updated | nicedate }}</p>
+  </section>
+  {% endif %}
+
+  {% if focus_history %}
+  <details class="focushist">
+    <summary>Past focuses ({{ focus_history | length }})</summary>
+    <ul class="fh-list">
+      {% for h in focus_history %}
+        <li class="fh-item">
+          <div class="fh-line">
+            {% if h.section %}{% set s = SECTION_BY_SLUG.get(h.section) %}{% if s %}<span class="fh-ic">{{ s.emoji }}</span>{% endif %}{% endif %}
+            <span class="fh-head">{{ h.headline }}</span>
+            {% if h.video_url %}<span class="fh-vid" title="has a video">🎥</span>{% endif %}
+            <span class="fh-date muted">{{ h.updated | nicedate }}</span>
+          </div>
+          {% if h.details %}<p class="fh-details muted">{{ h.details }}</p>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+</div>
+{% endif %}

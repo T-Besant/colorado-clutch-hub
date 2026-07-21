@@ -19,6 +19,8 @@
   {% if stats.did_today %}You've logged activity today — your streak is safe.{% else %}No activity logged today yet — your streak allows one rest day a week, so don't let it slip two days in a row.{% endif %}
 </p>
 
+{% with focus_label='Your development focus', focus_can_log=true %}{% include "_focus.html" %}{% endwith %}
+
 {% include "_badges.html" %}
 
 {% if notes %}
@@ -34,14 +36,14 @@
 </section>
 {% endif %}
 
-<section class="panel">
+<section class="panel" id="logform">
   <h2>Log your own activity</h2>
   <p class="muted">Trained on your own? Log it here — it counts toward your total and streak.</p>
   <form method="post" action="{{ url_for('me_log') }}">
-    <label>What did you do? <input name="title" placeholder="e.g. Tee work — 50 swings" required></label>
+    <label>What did you do? <input id="log-title" name="title" placeholder="e.g. Tee work — 50 swings" required></label>
     <div class="row2">
       <label>Type (optional)
-        <select name="section">
+        <select id="log-section" name="section">
           <option value="">— none —</option>
           {% for s in SECTIONS %}<option value="{{ s.slug }}">{{ s.emoji }} {{ s.name }}</option>{% endfor %}
         </select>
@@ -111,4 +113,17 @@
     {% endfor %}
   </table>
 </section>
+
+<script>
+  // "Log it for a point" on the focus card — prefill the log form and jump to it.
+  function prefillFocusLog(el) {
+    var t = document.getElementById('log-title');
+    var s = document.getElementById('log-section');
+    if (t) t.value = el.dataset.title || '';
+    if (s && el.dataset.section) s.value = el.dataset.section;
+    var f = document.getElementById('logform');
+    if (f) f.scrollIntoView({behavior: 'smooth', block: 'start'});
+    if (t) setTimeout(function () { t.focus(); }, 300);
+  }
+</script>
 {% endblock %}
