@@ -6,6 +6,21 @@
     <span class="announce-body">{{ announcement }}</span>
   </div>
 {% endif %}
+
+{% if bonus_drill %}
+  <a class="bonusdrill {{ 'earned' if bonus_drill_done else '' }}"
+     href="{{ url_for('section', slug=bonus_drill.section, drill=bonus_drill.id) }}#drillview">
+    <span class="bd-ic">⚡</span>
+    <span class="bd-body">
+      <span class="bd-label">Today's Bonus Drill</span>
+      <span class="bd-title">{{ bonus_drill.title }}</span>
+      <span class="bd-sub">{{ bonus_drill_section.name if bonus_drill_section else '' }} ·
+        {% if bonus_drill_done %}✓ bonus earned{% else %}complete it for +1 point{% endif %}</span>
+    </span>
+    <span class="bd-go">{% if bonus_drill_done %}✓{% else %}Go →{% endif %}</span>
+  </a>
+{% endif %}
+
 {% set me = current_player() %}
 {% if me and stats %}
   <div class="mebanner">

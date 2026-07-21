@@ -21,6 +21,26 @@
 </section>
 
 <section class="panel">
+  <h2>⚡ Bonus drill of the day</h2>
+  <p class="muted">Feature one posted drill on the home page — players earn a bonus point for completing it. Pick a fresh one each day to pull them onto your drills.</p>
+  {% if not activities %}
+    <p class="empty small">Post a drill first, then you can feature it here.</p>
+  {% else %}
+  <form method="post" action="{{ url_for('coach_bonus_drill') }}">
+    <label>Bonus drill
+      <select name="activity_id">
+        <option value="">— none (no bonus drill) —</option>
+        {% for a in activities %}
+          <option value="{{ a.id }}" {{ 'selected' if a.id == bonus_drill_id else '' }}>{{ (SECTIONS | selectattr('slug','equalto',a.section) | map(attribute='name') | first) }} — {{ a.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="btn small" type="submit">Set bonus drill</button>
+  </form>
+  {% endif %}
+</section>
+
+<section class="panel">
   <h2>Needs a nudge ({{ slipping|length }})</h2>
   {% if not slipping %}
     <p class="empty small">Everyone's trained in the last couple days. 🙌</p>

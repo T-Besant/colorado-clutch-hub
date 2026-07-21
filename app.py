@@ -165,6 +165,18 @@ def init_db():
             seen       INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
         );
+
+        -- One row each time a player earns the "bonus drill of the day" (+1).
+        -- Recorded when earned so the point survives the coach picking a new
+        -- bonus drill later. One award per player per day per drill.
+        CREATE TABLE IF NOT EXISTS bonus_awards (
+            player_id   INTEGER NOT NULL,
+            day         TEXT NOT NULL,      -- 'YYYY-MM-DD'
+            activity_id INTEGER NOT NULL,
+            PRIMARY KEY (player_id, day, activity_id),
+            FOREIGN KEY (player_id)   REFERENCES players(id)    ON DELETE CASCADE,
+            FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE
+        );
         """
     )
     # Migration: add pin_hash to an older players table if it's missing.
@@ -472,6 +484,40 @@ def _bonus_today_count(pid):
     return c + l
 
 
+def _bonus_drill_id():
+    """id of the coach-chosen 'bonus drill of the day', or None."""
+    v = get_setting("bonus_drill_id")
+    try:
+        return int(v) if v else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _bonus_drill():
+    """The active bonus-drill row, or None (also None if it was removed)."""
+    bid = _bonus_drill_id()
+    if not bid:
+        return None
+    return get_db().execute(
+        "SELECT * FROM activities WHERE id=? AND active=1", (bid,)).fetchone()
+
+
+def _featured_bonus(pid):
+    """Total 'bonus drill of the day' points this player has earned."""
+    return get_db().execute(
+        "SELECT COUNT(*) n FROM bonus_awards WHERE player_id=?", (pid,)).fetchone()["n"]
+
+
+def _bonus_drill_done_today(pid):
+    """Did this player earn today's bonus-drill point yet?"""
+    bid = _bonus_drill_id()
+    if not bid:
+        return False
+    return bool(get_db().execute(
+        "SELECT 1 FROM bonus_awards WHERE player_id=? AND day=? AND activity_id=?",
+        (pid, date.today().isoformat(), bid)).fetchone())
+
+
 def player_stats(pid):
     db = get_db()
     drills = db.execute(
@@ -489,7 +535,7 @@ def player_stats(pid):
         "SELECT COUNT(*) n FROM personal_logs WHERE player_id=? AND logged_on>=?",
         (pid, week_start),
     ).fetchone()["n"]
-    bonus = _bonus_points(pid)
+    bonus = _bonus_points(pid) + _featured_bonus(pid)   # S&A daily + bonus-drill
     return {
         "drills": drills,
         "personal": personal,
@@ -500,6 +546,7 @@ def player_stats(pid):
         "active_days": len(dates),
         "did_today": date.today() in dates,
         "bonus_today": _bonus_today_count(pid) > 0,
+        "bonus_drill_today": _bonus_drill_done_today(pid),
         "week": week,
     }
 
@@ -560,11 +607,16 @@ def home():
     me = current_player()
     stats = player_stats(me["id"]) if me else None
     board = _scoreboard_rows()
+    bonus_drill = _bonus_drill()
+    bonus_drill_section = (SECTION_BY_SLUG.get(bonus_drill["section"]) if bonus_drill else None)
+    bonus_drill_done = bool(me and stats and stats["bonus_drill_today"])
     return render_template(
         "home.html", counts=counts, stats=stats,
         board=board, my_id=(me["id"] if me else None),
         announcement=get_setting("announcement"),
         announcement_at=get_setting("announcement_at"),
+        bonus_drill=bonus_drill, bonus_drill_section=bonus_drill_section,
+        bonus_drill_done=bonus_drill_done,
     )
 
 
@@ -623,6 +675,7 @@ def section(slug):
         selected=selected,
         is_bonus=is_bonus,
         bonus_earned_today=bonus_earned_today,
+        bonus_drill_id=_bonus_drill_id(),
     )
 
 
@@ -680,6 +733,20 @@ def toggle():
     if now_done and BONUS_SECTION and act["section"] == BONUS_SECTION \
             and _bonus_today_count(me["id"]) == 1:
         flash(f"⚡ Bonus point! First {BONUS_SECTION_NAME} activity today (+1).", "ok")
+    # Bonus drill of the day: earn/lose the point on complete/undo.
+    if activity_id == _bonus_drill_id():
+        if now_done:
+            cur = db.execute(
+                "INSERT OR IGNORE INTO bonus_awards(player_id, day, activity_id) VALUES(?,?,?)",
+                (me["id"], today, activity_id))
+            db.commit()
+            if cur.rowcount:
+                flash("⚡ Bonus drill point! You did today's bonus drill (+1).", "ok")
+        else:
+            db.execute(
+                "DELETE FROM bonus_awards WHERE player_id=? AND day=? AND activity_id=?",
+                (me["id"], today, activity_id))
+            db.commit()
     if request.headers.get("X-Requested-With") == "fetch":
         return jsonify(done=now_done)
     return redirect(nxt)
@@ -992,7 +1059,25 @@ def coach_home():
     return render_template(
         "coach_home.html", players=players, activities=activities, comp=comp,
         slipping=slipping, announcement=get_setting("announcement"),
+        bonus_drill_id=_bonus_drill_id(),
     )
+
+
+@app.route("/coach/bonusdrill", methods=["POST"])
+@coach_required
+def coach_bonus_drill():
+    """Set or clear the 'bonus drill of the day' (shown on the home page)."""
+    aid = request.form.get("activity_id", type=int)
+    db = get_db()
+    if aid and db.execute("SELECT 1 FROM activities WHERE id=? AND active=1", (aid,)).fetchone():
+        db.execute("INSERT INTO settings(key,value) VALUES('bonus_drill_id',?) "
+                   "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (str(aid),))
+        flash("Bonus drill of the day set.", "ok")
+    else:
+        db.execute("DELETE FROM settings WHERE key='bonus_drill_id'")
+        flash("Bonus drill cleared.", "ok")
+    db.commit()
+    return redirect(url_for("coach_home"))
 
 
 @app.route("/coach/backup")

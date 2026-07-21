@@ -63,6 +63,25 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .announce-body { font-weight: 600; color: #4a3a12; white-space: pre-wrap; }
 .clearann { margin-top: 8px; }
 
+/* Bonus drill of the day — featured card on the home page */
+.bonusdrill {
+  display: flex; align-items: center; gap: 12px; text-decoration: none;
+  background: linear-gradient(90deg, #123f66, #1f6fa8); color: #fff;
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;
+  box-shadow: var(--shadow); border: 1px solid #0e2c47;
+}
+.bonusdrill.earned { background: linear-gradient(90deg, #1c5222, #2e7d47); }
+.bonusdrill .bd-ic { font-size: 1.6rem; flex: none; }
+.bd-body { display: flex; flex-direction: column; min-width: 0; }
+.bd-label { font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--gold); }
+.bonusdrill.earned .bd-label { color: #cdefd3; }
+.bd-title { font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; }
+.bd-sub { font-size: .8rem; color: #cfe0ee; }
+.bonusdrill.earned .bd-sub { color: #d7f0dc; }
+.bd-go { margin-left: auto; flex: none; font-weight: 800; color: var(--gold); }
+.bonusdrill.earned .bd-go { color: #fff; }
+.tag-bonus { color: var(--gold); font-weight: 800; }
+
 /* Speed & Agility daily-bonus messaging */
 .bonusbanner {
   display: flex; align-items: flex-start; gap: 10px;
