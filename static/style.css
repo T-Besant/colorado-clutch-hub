@@ -49,6 +49,8 @@ a { color: var(--blue); }
 h1 { font-size: 1.55rem; font-weight: 800; letter-spacing: -.02em; margin: .1em 0 .35em; color: var(--navy); }
 h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0 .5em; }
 .lead { color: var(--muted); margin-top: 0; }
+.drillsec { font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--navy); margin: 1.2em 0 .3em; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.drillsec:first-of-type { margin-top: .4em; }
 .back { display: inline-block; color: var(--muted); text-decoration: none; font-weight: 600; font-size: .88rem; margin-bottom: 8px; }
 .back:hover { color: var(--blue); }
 .emoji { font-size: 1.05em; }

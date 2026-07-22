@@ -110,22 +110,27 @@
 <section class="panel">
   <h2>Posted drills ({{ activities|length }})</h2>
   {% if not activities %}<p class="empty small">Nothing posted yet.</p>{% endif %}
-  <table class="tbl">
-    {% for a in activities %}
-      <tr>
-        <td>{{ SECTIONS | selectattr('slug','equalto',a.section) | map(attribute='emoji') | first }}</td>
-        <td><a href="{{ url_for('activity_detail', aid=a.id) }}">{{ a.title }}</a>{% if a.repeatable %} <span class="tag-daily">Daily</span>{% endif %}</td>
-        <td class="muted">{{ a.created | nicedate }}</td>
-        <td class="muted">{{ comp.get(a.id, 0) }} {{ 'completions' if a.repeatable else 'done' }}</td>
-        <td>
-          <form method="post" action="{{ url_for('activity_delete', aid=a.id) }}"
-                onsubmit="return confirm('Remove this drill?');">
-            <button class="link-danger" type="submit">remove</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
+  {% for s in SECTIONS %}
+    {% set drills = activities | selectattr('section','equalto',s.slug) | list %}
+    {% if drills %}
+      <h3 class="drillsec">{{ s.emoji }} {{ s.name }} <span class="muted">({{ drills|length }})</span></h3>
+      <table class="tbl">
+        {% for a in drills %}
+          <tr>
+            <td><a href="{{ url_for('activity_detail', aid=a.id) }}">{{ a.title }}</a>{% if a.repeatable %} <span class="tag-daily">Daily</span>{% endif %}</td>
+            <td class="muted">{{ a.created | nicedate }}</td>
+            <td class="muted">{{ comp.get(a.id, 0) }} {{ 'completions' if a.repeatable else 'done' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('activity_delete', aid=a.id) }}"
+                    onsubmit="return confirm('Remove this drill?');">
+                <button class="link-danger" type="submit">remove</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  {% endfor %}
 </section>
 
 <section class="panel">
