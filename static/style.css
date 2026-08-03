@@ -101,6 +101,25 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 
 .focus-video { margin: 12px 0 4px; }
 
+/* Weekly drill challenge tracker */
+.weekgoal {
+  background: linear-gradient(180deg, #f0f7fd, #fff);
+  border: 1px solid #cfe3f3; border-left: 4px solid var(--blue);
+  border-radius: 14px; padding: 12px 16px; margin: 4px 0 14px; box-shadow: var(--shadow);
+}
+.weekgoal.met { background: linear-gradient(180deg, #edfaf0, #fff); border-color: #b7e2c1; border-left-color: #2e7d47; }
+.wg-head { display: flex; align-items: flex-start; gap: 12px; }
+.wg-ic { font-size: 1.4rem; flex: none; line-height: 1.2; }
+.wg-main { min-width: 0; }
+.wg-label { margin: 0; font-size: .66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #2b6da3; }
+.weekgoal.met .wg-label { color: #2e7d47; }
+.wg-done { margin-left: 4px; }
+.wg-text { margin: 2px 0 0; color: var(--ink); }
+.wg-pips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.wg-pip { width: 22px; height: 10px; border-radius: 999px; background: #d9e6f2; flex: none; }
+.wg-pip.on { background: var(--blue); }
+.weekgoal.met .wg-pip.on { background: #2e7d47; }
+
 /* "Log it for a point" nudge on the player's own focus card */
 .focus-log {
   display: inline-block; margin: 10px 0 2px; cursor: pointer;

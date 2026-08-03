@@ -79,6 +79,12 @@ TEAM_SHORT = "Colorado Clutch"         # short name used in browser tab titles
 BONUS_SECTION = "speed-agility"
 BONUS_SECTION_NAME = next((s["name"] for s in SECTIONS if s["slug"] == BONUS_SECTION), "")
 
+# Weekly drill challenge: completing this many DIFFERENT coach-posted drills
+# within one calendar week (ISO, Mon–Sun) earns +1 bonus point that week. Meant
+# to pull players onto the app's posted drills (not just self-logged work).
+# Set to 0 or None to disable.
+WEEKLY_DRILL_GOAL = 7
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = _secret_key()
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -558,6 +564,42 @@ def _bonus_drill_done_today(pid):
         (pid, date.today().isoformat(), bid)).fetchone())
 
 
+def _drill_weeks(pid):
+    """Map (ISO year, ISO week) -> set of DISTINCT coach-drill activity_ids the
+    player completed that week. Basis for the weekly drill challenge."""
+    weeks = {}
+    for r in get_db().execute(
+        "SELECT activity_id, done_on FROM completions WHERE player_id=?", (pid,)):
+        try:
+            d = date.fromisoformat(r["done_on"][:10])
+        except (ValueError, TypeError):
+            continue
+        weeks.setdefault(d.isocalendar()[:2], set()).add(r["activity_id"])
+    return weeks
+
+
+def _weekly_goal_bonus(weeks):
+    """+1 for each week in which the player met WEEKLY_DRILL_GOAL distinct drills."""
+    if not WEEKLY_DRILL_GOAL:
+        return 0
+    return sum(1 for ids in weeks.values() if len(ids) >= WEEKLY_DRILL_GOAL)
+
+
+def _weekly_goal_progress(weeks):
+    """This week's challenge status for the tracker, or None if disabled."""
+    if not WEEKLY_DRILL_GOAL:
+        return None
+    n = len(weeks.get(date.today().isocalendar()[:2], set()))
+    goal = WEEKLY_DRILL_GOAL
+    return {
+        "done": n,
+        "goal": goal,
+        "remaining": max(0, goal - n),
+        "met": n >= goal,
+        "pct": min(100, round(100 * n / goal)) if goal else 0,
+    }
+
+
 def player_stats(pid):
     db = get_db()
     drills = db.execute(
@@ -575,7 +617,9 @@ def player_stats(pid):
         "SELECT COUNT(*) n FROM personal_logs WHERE player_id=? AND logged_on>=?",
         (pid, week_start),
     ).fetchone()["n"]
-    bonus = _bonus_points(pid) + _featured_bonus(pid)   # S&A daily + bonus-drill
+    weeks = _drill_weeks(pid)
+    # S&A daily + bonus-drill + weekly drill-challenge
+    bonus = _bonus_points(pid) + _featured_bonus(pid) + _weekly_goal_bonus(weeks)
     return {
         "drills": drills,
         "personal": personal,
@@ -587,6 +631,7 @@ def player_stats(pid):
         "did_today": date.today() in dates,
         "bonus_today": _bonus_today_count(pid) > 0,
         "bonus_drill_today": _bonus_drill_done_today(pid),
+        "weekly_goal": _weekly_goal_progress(weeks),
         "week": week,
     }
 
@@ -734,6 +779,10 @@ def toggle():
     if act is None:
         abort(404)
     today = date.today().isoformat()
+    # Weekly drill challenge: note whether the goal was already met before this
+    # toggle, so we can congratulate only on the completion that reaches it.
+    wk_before = _weekly_goal_progress(_drill_weeks(me["id"]))
+    met_week_before = bool(wk_before and wk_before["met"])
     if act["repeatable"]:
         # Per-day: toggle just today's completion; past days stay for credit.
         existing = db.execute(
@@ -773,6 +822,12 @@ def toggle():
     if now_done and BONUS_SECTION and act["section"] == BONUS_SECTION \
             and _bonus_today_count(me["id"]) == 1:
         flash(f"⚡ Bonus point! First {BONUS_SECTION_NAME} activity today (+1).", "ok")
+    # Weekly drill challenge: congratulate on the completion that reaches the goal.
+    if now_done and WEEKLY_DRILL_GOAL and not met_week_before:
+        wk_after = _weekly_goal_progress(_drill_weeks(me["id"]))
+        if wk_after and wk_after["met"]:
+            flash(f"🎬 Weekly challenge complete! {WEEKLY_DRILL_GOAL} different app "
+                  f"drills this week (+1).", "ok")
     # Bonus drill of the day: earn/lose the point on complete/undo.
     if activity_id == _bonus_drill_id():
         if now_done:

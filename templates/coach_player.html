@@ -29,6 +29,8 @@
   {% if stats.did_today %}Trained today.{% else %}No activity logged today.{% endif %}
 </p>
 
+{% with wg_subj=player.name.split()[0] %}{% include "_weekgoal.html" %}{% endwith %}
+
 <section class="panel focuspanel">
   <h2>🎯 Development focus</h2>
   <p class="muted">
