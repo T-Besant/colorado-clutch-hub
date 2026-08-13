@@ -69,6 +69,7 @@
     <label>Video link <input name="video_url" placeholder="Paste YouTube / Facebook / Instagram link"></label>
     <label>Notes <textarea name="notes" rows="2" placeholder="Reps, cues, focus points…"></textarea></label>
     <label class="check"><input type="checkbox" name="repeatable" value="1"> Repeatable — players can complete this every day (counts each day toward totals &amp; streaks)</label>
+    <label class="check"><input type="checkbox" name="require_reps" value="1"> Require rounds/reps — players must log what they did (and can add a note) to mark it done</label>
     <button class="btn" type="submit">Post drill</button>
   </form>
 </section>
@@ -120,6 +121,15 @@
             <td><a href="{{ url_for('activity_detail', aid=a.id) }}">{{ a.title }}</a>{% if a.repeatable %} <span class="tag-daily">Daily</span>{% endif %}</td>
             <td class="muted">{{ a.created | nicedate }}</td>
             <td class="muted">{{ comp.get(a.id, 0) }} {{ 'completions' if a.repeatable else 'done' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('activity_reqreps', aid=a.id) }}">
+                <input type="hidden" name="next" value="{{ url_for('coach_home') }}">
+                <button class="repsflag {{ 'on' if a.require_reps else '' }}" type="submit"
+                        title="{{ 'Rounds/reps required — tap to make it one-tap again' if a.require_reps else 'Tap to require rounds/reps for this drill' }}">
+                  {{ 'Reps ✓' if a.require_reps else 'require reps' }}
+                </button>
+              </form>
+            </td>
             <td>
               <form method="post" action="{{ url_for('activity_delete', aid=a.id) }}"
                     onsubmit="return confirm('Remove this drill?');">

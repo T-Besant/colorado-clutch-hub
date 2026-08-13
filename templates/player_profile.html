@@ -4,6 +4,9 @@
 <a class="back" href="{{ url_for('team') }}">← Team</a>
 <h1>{{ player.name.split()[0] }}{% if is_me %} <span class="youtag">you</span>{% endif %}</h1>
 <p class="lead">Teammate activity — read only.{% if is_me %} This is how others see your page.{% endif %}</p>
+{% if is_coach() %}
+  <p><a class="btn small" href="{{ url_for('coach_player', pid=player.id) }}">Manage as coach → (edit / remove entries, notes, focus)</a></p>
+{% endif %}
 
 <div class="stats stats4">
   <div class="stat"><span class="num">{{ stats.total }}</span><span class="lbl">Points</span></div>
@@ -26,6 +29,7 @@
         <span class="tl-what">
           {% if e.kind == 'drill' %}Completed <strong>{{ e.title }}</strong>{% else %}Logged <strong>{{ e.title }}</strong>{% endif %}
           {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
+          {% if e.kind == 'drill' %}{% set rl = reps_label(e.rounds, e.reps) %}{% if rl %}<span class="reps">{{ rl }}</span>{% endif %}{% endif %}
         </span>
       </li>
     {% endfor %}

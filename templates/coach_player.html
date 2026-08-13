@@ -120,6 +120,7 @@
           <span class="tl-what">
             {% if e.kind == 'drill' %}Completed <strong>{{ e.title }}</strong>{% else %}Logged <strong>{{ e.title }}</strong>{% endif %}
             {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
+            {% if e.kind == 'drill' %}{% set rl = reps_label(e.rounds, e.reps) %}{% if rl %}<span class="reps">{{ rl }}</span>{% endif %}{% if e.note %}<span class="tl-note">“{{ e.note }}”</span>{% endif %}{% endif %}
           </span>
           {% if e.kind == 'drill' %}
             <form class="tl-act" method="post" action="{{ url_for('coach_completion_delete', pid=player.id) }}"

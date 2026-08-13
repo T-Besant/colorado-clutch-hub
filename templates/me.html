@@ -101,7 +101,7 @@
     {% for r in recent %}
       <tr>
         <td>{{ SECTIONS | selectattr('slug','equalto',r.section) | map(attribute='emoji') | first }}</td>
-        <td>{{ r.title }}</td>
+        <td>{{ r.title }}{% set rl = reps_label(r.rounds, r.reps) %}{% if rl %} <span class="reps">{{ rl }}</span>{% endif %}{% if r.note %}<br><span class="tl-note">“{{ r.note }}”</span>{% endif %}</td>
         <td class="muted">{{ r.done_at | nicedate }}</td>
         <td>
           <form method="post" action="{{ url_for('me_completion_undo') }}"

@@ -122,22 +122,27 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS activities (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            section     TEXT NOT NULL,
-            title       TEXT NOT NULL,
-            notes       TEXT,
-            video_url   TEXT,
-            repeatable  INTEGER NOT NULL DEFAULT 0,
-            active      INTEGER NOT NULL DEFAULT 1,
-            created     TEXT NOT NULL
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            section      TEXT NOT NULL,
+            title        TEXT NOT NULL,
+            notes        TEXT,
+            video_url    TEXT,
+            repeatable   INTEGER NOT NULL DEFAULT 0,
+            require_reps INTEGER NOT NULL DEFAULT 0,  -- player must log rounds/reps
+            active       INTEGER NOT NULL DEFAULT 1,
+            created      TEXT NOT NULL
         );
 
         -- One row per (player, drill, DAY): repeatable drills accrue one per day.
+        -- rounds/reps/note capture what the player actually did (accountability).
         CREATE TABLE IF NOT EXISTS completions (
             activity_id INTEGER NOT NULL,
             player_id   INTEGER NOT NULL,
             done_on     TEXT NOT NULL,       -- 'YYYY-MM-DD'
             done_at     TEXT NOT NULL,       -- full timestamp
+            rounds      INTEGER,
+            reps        INTEGER,
+            note        TEXT,
             PRIMARY KEY (activity_id, player_id, done_on),
             FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE,
             FOREIGN KEY (player_id)   REFERENCES players(id)    ON DELETE CASCADE
@@ -237,6 +242,19 @@ def init_db():
     fcols = [r[1] for r in db.execute("PRAGMA table_info(player_focus)")]
     if fcols and "video_url" not in fcols:
         db.execute("ALTER TABLE player_focus ADD COLUMN video_url TEXT")
+    # Migration: per-drill "require rounds/reps" flag on activities.
+    acols2 = [r[1] for r in db.execute("PRAGMA table_info(activities)")]
+    if acols2 and "require_reps" not in acols2:
+        db.execute("ALTER TABLE activities ADD COLUMN require_reps INTEGER NOT NULL DEFAULT 0")
+    # Migration: rounds/reps/note on completions (what the player actually did).
+    ccols2 = [r[1] for r in db.execute("PRAGMA table_info(completions)")]
+    if ccols2:
+        if "rounds" not in ccols2:
+            db.execute("ALTER TABLE completions ADD COLUMN rounds INTEGER")
+        if "reps" not in ccols2:
+            db.execute("ALTER TABLE completions ADD COLUMN reps INTEGER")
+        if "note" not in ccols2:
+            db.execute("ALTER TABLE completions ADD COLUMN note TEXT")
     # Default coach PIN on first run.
     if db.execute("SELECT value FROM settings WHERE key='coach_pin'").fetchone() is None:
         db.execute("INSERT INTO settings(key, value) VALUES('coach_pin', ?)", ("1234",))
@@ -371,6 +389,20 @@ def get_focus(pid):
         "SELECT * FROM player_focus WHERE player_id=? AND active=1 "
         "ORDER BY id DESC LIMIT 1", (pid,)
     ).fetchone()
+
+
+def reps_label(rounds, reps):
+    """Compact label for a completion's logged work, e.g. '3×10', '25 reps'."""
+    if rounds and reps:
+        return f"{rounds}×{reps}"
+    if reps:
+        return f"{reps} reps"
+    if rounds:
+        return f"{rounds} rounds"
+    return ""
+
+
+app.jinja_env.globals["reps_label"] = reps_label
 
 
 def focus_history(pid):
@@ -738,10 +770,26 @@ def section(slug):
             times = db.execute(
                 "SELECT COUNT(*) n FROM completions WHERE activity_id=? AND player_id=?",
                 (aid, me["id"])).fetchone()["n"]
+            # What the player logged for the relevant completion (today if
+            # repeatable, else the one-time completion) — for a confirmation line.
+            if me["id"] in done[aid]:
+                if a["repeatable"]:
+                    lr = db.execute(
+                        "SELECT rounds, reps, note FROM completions WHERE activity_id=? "
+                        "AND player_id=? AND done_on=?", (aid, me["id"], today)).fetchone()
+                else:
+                    lr = db.execute(
+                        "SELECT rounds, reps, note FROM completions WHERE activity_id=? "
+                        "AND player_id=? ORDER BY done_on DESC LIMIT 1", (aid, me["id"])).fetchone()
+            else:
+                lr = None
             mine[aid] = {
                 "done": me["id"] in done[aid],
                 "times": times,
                 "streak": _drill_streak(aid, me["id"]) if a["repeatable"] else 0,
+                "rounds": lr["rounds"] if lr else None,
+                "reps": lr["reps"] if lr else None,
+                "note": lr["note"] if lr else None,
             }
     # Which drill is shown in the main pane (left-list picker). Default: newest.
     sel = request.args.get("drill", type=int)
@@ -775,7 +823,9 @@ def toggle():
     if not activity_id:
         abort(400)
     db = get_db()
-    act = db.execute("SELECT repeatable, section FROM activities WHERE id=?", (activity_id,)).fetchone()
+    act = db.execute(
+        "SELECT repeatable, section, require_reps FROM activities WHERE id=?",
+        (activity_id,)).fetchone()
     if act is None:
         abort(404)
     today = date.today().isoformat()
@@ -783,40 +833,43 @@ def toggle():
     # toggle, so we can congratulate only on the completion that reaches it.
     wk_before = _weekly_goal_progress(_drill_weeks(me["id"]))
     met_week_before = bool(wk_before and wk_before["met"])
+    # Is there already a completion we'd be undoing? (repeatable = just today.)
     if act["repeatable"]:
-        # Per-day: toggle just today's completion; past days stay for credit.
         existing = db.execute(
             "SELECT 1 FROM completions WHERE activity_id=? AND player_id=? AND done_on=?",
-            (activity_id, me["id"], today),
-        ).fetchone()
-        if existing:
-            db.execute(
-                "DELETE FROM completions WHERE activity_id=? AND player_id=? AND done_on=?",
-                (activity_id, me["id"], today))
-            now_done = False
-        else:
-            db.execute(
-                "INSERT OR IGNORE INTO completions(activity_id, player_id, done_on, done_at) "
-                "VALUES(?,?,?,?)",
-                (activity_id, me["id"], today, datetime.now().isoformat(timespec="seconds")))
-            now_done = True
+            (activity_id, me["id"], today)).fetchone()
     else:
-        # One-time: done once ever; toggle removes all rows for the pair.
         existing = db.execute(
             "SELECT 1 FROM completions WHERE activity_id=? AND player_id=?",
-            (activity_id, me["id"]),
-        ).fetchone()
-        if existing:
-            db.execute(
-                "DELETE FROM completions WHERE activity_id=? AND player_id=?",
-                (activity_id, me["id"]))
-            now_done = False
+            (activity_id, me["id"])).fetchone()
+    if existing:
+        # Undo — one tap, no rounds/reps needed. (Repeatable clears today only.)
+        if act["repeatable"]:
+            db.execute("DELETE FROM completions WHERE activity_id=? AND player_id=? AND done_on=?",
+                       (activity_id, me["id"], today))
         else:
-            db.execute(
-                "INSERT OR IGNORE INTO completions(activity_id, player_id, done_on, done_at) "
-                "VALUES(?,?,?,?)",
-                (activity_id, me["id"], today, datetime.now().isoformat(timespec="seconds")))
-            now_done = True
+            db.execute("DELETE FROM completions WHERE activity_id=? AND player_id=?",
+                       (activity_id, me["id"]))
+        now_done = False
+    else:
+        # Marking done. Drills flagged require_reps need at least one of rounds/reps.
+        rounds = request.form.get("rounds", type=int)
+        reps = request.form.get("reps", type=int)
+        note = (request.form.get("note") or "").strip() or None
+        if rounds is not None and rounds < 1:
+            rounds = None
+        if reps is not None and reps < 1:
+            reps = None
+        if act["require_reps"] and rounds is None and reps is None:
+            flash("Enter your rounds and/or reps to log this drill.", "error")
+            return redirect(nxt)
+        db.execute(
+            "INSERT OR IGNORE INTO completions"
+            "(activity_id, player_id, done_on, done_at, rounds, reps, note) "
+            "VALUES(?,?,?,?,?,?,?)",
+            (activity_id, me["id"], today,
+             datetime.now().isoformat(timespec="seconds"), rounds, reps, note))
+        now_done = True
     db.commit()
     # Daily bonus: first Speed & Agility activity of the day earns +1.
     if now_done and BONUS_SECTION and act["section"] == BONUS_SECTION \
@@ -915,7 +968,8 @@ def me():
         (p["id"],),
     ).fetchall()
     recent = db.execute(
-        """SELECT a.title, a.section, c.done_at, c.activity_id, c.done_on
+        """SELECT a.title, a.section, c.done_at, c.activity_id, c.done_on,
+                  c.rounds, c.reps, c.note
              FROM completions c JOIN activities a ON a.id=c.activity_id
             WHERE c.player_id=? ORDER BY c.done_at DESC LIMIT 10""",
         (p["id"],),
@@ -1240,17 +1294,35 @@ def activity_new():
     notes = request.form.get("notes", "").strip()
     video = request.form.get("video_url", "").strip()
     repeatable = 1 if request.form.get("repeatable") else 0
+    require_reps = 1 if request.form.get("require_reps") else 0
     if section not in SECTION_BY_SLUG or not title:
         flash("Pick a section and give it a title.", "error")
         return redirect(url_for("coach_home"))
     get_db().execute(
-        "INSERT INTO activities(section, title, notes, video_url, repeatable, created) "
-        "VALUES(?,?,?,?,?,?)",
-        (section, title, notes, video, repeatable, datetime.now().isoformat(timespec="seconds")),
+        "INSERT INTO activities(section, title, notes, video_url, repeatable, require_reps, created) "
+        "VALUES(?,?,?,?,?,?,?)",
+        (section, title, notes, video, repeatable, require_reps,
+         datetime.now().isoformat(timespec="seconds")),
     )
     get_db().commit()
     flash("Posted!", "ok")
     return redirect(url_for("section", slug=section))
+
+
+@app.route("/coach/activity/<int:aid>/reqreps", methods=["POST"])
+@coach_required
+def activity_reqreps(aid):
+    """Flip whether an already-posted drill requires rounds/reps to mark done."""
+    db = get_db()
+    row = db.execute("SELECT require_reps FROM activities WHERE id=? AND active=1", (aid,)).fetchone()
+    if row is None:
+        abort(404)
+    newval = 0 if row["require_reps"] else 1
+    db.execute("UPDATE activities SET require_reps=? WHERE id=?", (newval, aid))
+    db.commit()
+    flash("Rounds/reps now required for that drill." if newval
+          else "That drill is back to one-tap (no rounds/reps).", "ok")
+    return redirect(request.form.get("next") or url_for("coach_home"))
 
 
 @app.route("/coach/activity/<int:aid>/delete", methods=["POST"])
@@ -1301,11 +1373,13 @@ def _player_feed(pid, limit=None):
     db = get_db()
     feed = []
     for r in db.execute(
-        """SELECT c.activity_id aid, c.done_on d, a.title t, a.section s
+        """SELECT c.activity_id aid, c.done_on d, a.title t, a.section s,
+                  c.rounds, c.reps, c.note
              FROM completions c JOIN activities a ON a.id = c.activity_id
             WHERE c.player_id = ?""", (pid,)):
         feed.append({"date": r["d"], "kind": "drill", "title": r["t"], "section": r["s"],
-                     "key": f'{r["aid"]}:{r["d"]}'})
+                     "key": f'{r["aid"]}:{r["d"]}',
+                     "rounds": r["rounds"], "reps": r["reps"], "note": r["note"]})
     for r in db.execute(
         "SELECT id, logged_on d, title t, section s FROM personal_logs WHERE player_id=?", (pid,)):
         feed.append({"date": r["d"], "kind": "log", "title": r["t"], "section": r["s"],

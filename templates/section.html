@@ -26,6 +26,7 @@
       <label>Video link <input name="video_url" placeholder="Paste YouTube / FB / Instagram link"></label>
       <label>Notes <textarea name="notes" rows="2" placeholder="Reps, cues, what to focus on…"></textarea></label>
       <label class="check"><input type="checkbox" name="repeatable" value="1"> Repeatable — players can complete this every day</label>
+      <label class="check"><input type="checkbox" name="require_reps" value="1"> Require rounds/reps — players must log what they did to mark it done</label>
       <button class="btn" type="submit">Post drill</button>
     </form>
   </details>
@@ -68,19 +69,41 @@
 
     <div class="roster">
       {% if me %}
-        <form method="post" action="{{ url_for('toggle') }}" class="markform">
-          <input type="hidden" name="activity_id" value="{{ a.id }}">
-          <input type="hidden" name="next" value="{{ url_for('section', slug=section.slug, drill=a.id) }}#drillview">
-          {% if a.repeatable %}
-            <button type="submit" class="bigmark {{ 'on' if my.done else '' }}">
-              {{ '✓ Done today — tap to undo' if my.done else 'Mark done for today' }}
+        {% if my.done %}
+          {# Already done — one-tap undo, plus a note of what they logged. #}
+          <form method="post" action="{{ url_for('toggle') }}" class="markform">
+            <input type="hidden" name="activity_id" value="{{ a.id }}">
+            <input type="hidden" name="next" value="{{ url_for('section', slug=section.slug, drill=a.id) }}#drillview">
+            <button type="submit" class="bigmark on">
+              {{ '✓ Done today — tap to undo' if a.repeatable else '✓ Done — tap to undo' }}
             </button>
-          {% else %}
-            <button type="submit" class="bigmark {{ 'on' if my.done else '' }}">
-              {{ '✓ Done — tap to undo' if my.done else 'Mark as done' }}
-            </button>
+          </form>
+          {% set rl = reps_label(my.rounds, my.reps) %}
+          {% if rl or my.note %}
+            <p class="mylog">You logged{% if rl %} <strong>{{ rl }}</strong>{% endif %}{% if my.note %} — “{{ my.note }}”{% endif %}</p>
           {% endif %}
-        </form>
+        {% elif a.require_reps %}
+          {# Must log rounds/reps to mark done. #}
+          <form method="post" action="{{ url_for('toggle') }}" class="markform repsform" onsubmit="return repsCheck(this)">
+            <input type="hidden" name="activity_id" value="{{ a.id }}">
+            <input type="hidden" name="next" value="{{ url_for('section', slug=section.slug, drill=a.id) }}#drillview">
+            <p class="repshint">📋 Log what you did — enter your <strong>rounds and/or reps</strong> to mark this done. Then jot a note on how the session went (anything you want to remember).</p>
+            <div class="repsrow">
+              <label>Rounds <input type="number" name="rounds" min="1" inputmode="numeric" placeholder="e.g. 3"></label>
+              <label>Reps <input type="number" name="reps" min="1" inputmode="numeric" placeholder="e.g. 10"></label>
+            </div>
+            <label class="repsnotelbl">Notes (optional) <textarea name="note" rows="2" maxlength="400" placeholder="How did it go? Anything to remember for next time?"></textarea></label>
+            <button type="submit" class="bigmark">Log it &amp; mark done</button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('toggle') }}" class="markform">
+            <input type="hidden" name="activity_id" value="{{ a.id }}">
+            <input type="hidden" name="next" value="{{ url_for('section', slug=section.slug, drill=a.id) }}#drillview">
+            <button type="submit" class="bigmark">
+              {{ 'Mark done for today' if a.repeatable else 'Mark as done' }}
+            </button>
+          </form>
+        {% endif %}
         {% if a.repeatable and my.times %}
           <p class="mystat">You've done this <strong>{{ my.times }}</strong> day{{ '' if my.times == 1 else 's' }}{% if my.streak > 0 %} · 🔥 {{ my.streak }}-day streak{% endif %}</p>
         {% endif %}
@@ -106,4 +129,16 @@
   </section>
 </div>
 {% endif %}
+<script>
+  // Require at least one of rounds/reps before a reps-drill can be logged.
+  function repsCheck(form) {
+    var r = form.rounds.value.trim(), p = form.reps.value.trim();
+    if (!r && !p) {
+      alert("Enter your rounds and/or reps to log this drill.");
+      form.rounds.focus();
+      return false;
+    }
+    return true;
+  }
+</script>
 {% endblock %}

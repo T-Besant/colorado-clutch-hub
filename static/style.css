@@ -120,6 +120,29 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .wg-pip.on { background: var(--blue); }
 .weekgoal.met .wg-pip.on { background: #2e7d47; }
 
+/* Rounds/reps logging on a drill (accountability) */
+.repsform { display: block; }
+.repshint { margin: 0 0 10px; font-size: .9rem; color: #4a3a12; background: #fff7e0;
+  border: 1px solid #f0d99a; border-left: 3px solid var(--gold); border-radius: 8px; padding: 8px 12px; }
+.repsrow { display: flex; gap: 12px; margin-bottom: 8px; }
+.repsrow label { flex: 1; font-weight: 600; font-size: .9rem; }
+.repsrow input { width: 100%; font: inherit; padding: 8px 10px; margin-top: 4px;
+  border: 1px solid var(--line); border-radius: 8px; }
+.repsnotelbl { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 10px; }
+.repsnotelbl textarea { width: 100%; font: inherit; padding: 8px 10px; margin-top: 4px;
+  border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+.mylog { margin: 8px 0 0; font-size: .9rem; color: var(--muted); }
+/* Compact reps badge + logged note, shown in feeds/timelines */
+.reps { display: inline-block; font-size: .74rem; font-weight: 800; color: var(--blue);
+  background: var(--tint); border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: middle; }
+.tl-note { color: var(--muted); font-style: italic; margin-left: 6px; }
+/* Coach toggle: require rounds/reps on an already-posted drill */
+.repsflag { font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer;
+  border-radius: 999px; padding: 2px 10px; white-space: nowrap;
+  color: var(--muted); background: transparent; border: 1px solid var(--line); }
+.repsflag:hover { border-color: var(--blue); color: var(--blue); }
+.repsflag.on { color: #fff; background: var(--blue); border-color: var(--blue); }
+
 /* "Log it for a point" nudge on the player's own focus card */
 .focus-log {
   display: inline-block; margin: 10px 0 2px; cursor: pointer;
