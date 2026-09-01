@@ -107,6 +107,9 @@
 
 {% include "_badges.html" %}
 
+{% set _bio = player.age or player.grade or player.height or player.weight or player.bats or player.throws or player.positions or player.fav_team %}
+{% if _bio %}<section class="panel biopanel"><h2>Player profile</h2>{% include "_bio.html" %}</section>{% endif %}
+
 <section class="panel">
   <h2>Recent activity</h2>
   <p class="muted">Drop a note on any item so {{ player.name.split()[0] }} knows you're watching their work — they'll see it on their page.</p>

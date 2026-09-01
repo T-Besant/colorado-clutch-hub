@@ -1,0 +1,51 @@
+{# Stacked, always-visible scoreboards. Expects `boards` (full dict:
+   alltime/week/month/drills) and `my_id`. Optional `board_limit` shows only the
+   top N per board plus the logged-in player's own rank row if they're below it. #}
+{% macro board_table(rows, valkey, vallabel, show_streak, my_id, limit) %}
+  {% set shown = (rows[:limit]) if limit else rows %}
+  {% set shown_ids = shown | map(attribute='id') | list %}
+  {% set ns = namespace(rank=0, row=None) %}
+  {% if my_id %}{% for r in rows %}{% if r.id == my_id %}{% set ns.rank = loop.index %}{% set ns.row = r %}{% endif %}{% endfor %}{% endif %}
+  <table class="board compact">
+    <thead>
+      <tr><th></th><th></th><th class="h-num">{{ vallabel }}</th>{% if show_streak %}<th class="h-num">Streak</th>{% endif %}</tr>
+    </thead>
+    <tbody>
+      {% for r in shown %}
+        {% set parts = r.name.split() %}
+        <tr class="{{ 'meRow' if r.id == my_id else '' }}">
+          <td class="rank"><span class="rankbadge {% if loop.index == 1 %}r1{% elif loop.index == 2 %}r2{% elif loop.index == 3 %}r3{% endif %}">{{ loop.index }}</span></td>
+          <td class="nm"><a href="{{ url_for('player_profile', pid=r.id) }}">{{ parts[0] }}{% if parts|length > 1 %} {{ parts[1][0] }}.{% endif %}</a>{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
+          <td class="big">{{ r[valkey] }}</td>
+          {% if show_streak %}<td class="stk">{{ r.streak }}{% if r.streak > 0 %}🔥{% endif %}</td>{% endif %}
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="empty small">No players yet.</td></tr>
+      {% endfor %}
+      {% if limit and ns.row and ns.rank > limit %}
+        <tr class="meRow yourank">
+          <td class="rank"><span class="rankbadge">{{ ns.rank }}</span></td>
+          <td class="nm"><a href="{{ url_for('player_profile', pid=ns.row.id) }}">{{ ns.row.name.split()[0] }}</a> <span class="youtag">you</span></td>
+          <td class="big">{{ ns.row[valkey] }}</td>
+          {% if show_streak %}<td class="stk">{{ ns.row.streak }}{% if ns.row.streak > 0 %}🔥{% endif %}</td>{% endif %}
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+{% endmacro %}
+
+{% set defs = [
+  {'key': 'alltime', 'title': 'All-Time',   'val': 'total', 'lbl': 'Pts',    'streak': true,  'note': ''},
+  {'key': 'week',    'title': 'This Week',   'val': 'value', 'lbl': 'Pts',    'streak': false, 'note': 'resets Monday'},
+  {'key': 'month',   'title': 'This Month',  'val': 'value', 'lbl': 'Pts',    'streak': false, 'note': 'resets the 1st'},
+  {'key': 'drills',  'title': 'Most Drills', 'val': 'value', 'lbl': 'Drills', 'streak': false, 'note': 'different drills'}
+] %}
+{% for d in defs %}
+  <div class="panel sbcard boardcard">
+    <div class="boardcard-head">
+      <h3>{{ d.title }}</h3>
+      {% if d.note %}<span class="boardcard-note">{{ d.note }}</span>{% endif %}
+    </div>
+    {{ board_table(boards[d.key], d.val, d.lbl, d.streak, my_id, board_limit|default(none)) }}
+  </div>
+{% endfor %}

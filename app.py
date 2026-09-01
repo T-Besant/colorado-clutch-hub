@@ -118,7 +118,16 @@ def init_db():
             name     TEXT NOT NULL,
             pin_hash TEXT,
             active   INTEGER NOT NULL DEFAULT 1,
-            created  TEXT NOT NULL
+            created  TEXT NOT NULL,
+            -- player-editable bio (all optional)
+            age       INTEGER,
+            grade     TEXT,
+            height    TEXT,
+            weight    TEXT,
+            bats      TEXT,
+            throws    TEXT,
+            positions TEXT,
+            fav_team  TEXT
         );
 
         CREATE TABLE IF NOT EXISTS activities (
@@ -242,6 +251,13 @@ def init_db():
     fcols = [r[1] for r in db.execute("PRAGMA table_info(player_focus)")]
     if fcols and "video_url" not in fcols:
         db.execute("ALTER TABLE player_focus ADD COLUMN video_url TEXT")
+    # Migration: player bio columns (all optional, player-editable).
+    pcols = [r[1] for r in db.execute("PRAGMA table_info(players)")]
+    for col, decl in (("age", "INTEGER"), ("grade", "TEXT"), ("height", "TEXT"),
+                      ("weight", "TEXT"), ("bats", "TEXT"), ("throws", "TEXT"),
+                      ("positions", "TEXT"), ("fav_team", "TEXT")):
+        if col not in pcols:
+            db.execute(f"ALTER TABLE players ADD COLUMN {col} {decl}")
     # Migration: per-drill "require rounds/reps" flag on activities.
     acols2 = [r[1] for r in db.execute("PRAGMA table_info(activities)")]
     if acols2 and "require_reps" not in acols2:
@@ -403,6 +419,7 @@ def reps_label(rounds, reps):
 
 
 app.jinja_env.globals["reps_label"] = reps_label
+app.jinja_env.globals["HAND"] = {"R": "Right", "L": "Left", "S": "Switch"}
 
 
 def focus_history(pid):
@@ -713,6 +730,81 @@ def _scoreboard_rows():
     return rows
 
 
+def _period_points(pid, start, end):
+    """Points a player earned with a date in [start, end] (inclusive, ISO
+    strings): drill completions + self-logs + S&A daily bonus (distinct days)
+    + bonus-drill-of-the-day awards. Used by the weekly/monthly boards."""
+    db = get_db()
+    n = db.execute(
+        "SELECT COUNT(*) c FROM completions WHERE player_id=? AND done_on BETWEEN ? AND ?",
+        (pid, start, end)).fetchone()["c"]
+    n += db.execute(
+        "SELECT COUNT(*) c FROM personal_logs WHERE player_id=? AND logged_on BETWEEN ? AND ?",
+        (pid, start, end)).fetchone()["c"]
+    if BONUS_SECTION:
+        days = set()
+        for r in db.execute(
+            "SELECT DISTINCT c.done_on d FROM completions c JOIN activities a ON a.id=c.activity_id "
+            "WHERE c.player_id=? AND a.section=? AND c.done_on BETWEEN ? AND ?",
+            (pid, BONUS_SECTION, start, end)):
+            days.add(r["d"])
+        for r in db.execute(
+            "SELECT DISTINCT logged_on d FROM personal_logs "
+            "WHERE player_id=? AND section=? AND logged_on BETWEEN ? AND ?",
+            (pid, BONUS_SECTION, start, end)):
+            days.add(r["d"])
+        n += len(days)
+    n += db.execute(
+        "SELECT COUNT(*) c FROM bonus_awards WHERE player_id=? AND day BETWEEN ? AND ?",
+        (pid, start, end)).fetchone()["c"]
+    return n
+
+
+def _distinct_drills(pid):
+    """How many DIFFERENT coach drills this player has ever completed (each drill
+    counts once — repeats don't add). Powers the 'most drills' board."""
+    return get_db().execute(
+        "SELECT COUNT(DISTINCT activity_id) c FROM completions WHERE player_id=?",
+        (pid,)).fetchone()["c"]
+
+
+def _week_start():
+    today = date.today()
+    return today - timedelta(days=today.weekday())        # Monday of this week
+
+
+def _month_start():
+    return date.today().replace(day=1)
+
+
+def _all_boards(limit=None):
+    """Build every scoreboard: all-time points, this week, this month, and most
+    different drills. Each is a list of dicts sorted best-first."""
+    db = get_db()
+    players = db.execute("SELECT id, name FROM players WHERE active=1").fetchall()
+    today = date.today().isoformat()
+    wk, mo = _week_start().isoformat(), _month_start().isoformat()
+
+    alltime = _scoreboard_rows()
+
+    week = [{"id": p["id"], "name": p["name"], "value": _period_points(p["id"], wk, today)}
+            for p in players]
+    week.sort(key=lambda r: (-r["value"], r["name"].lower()))
+
+    month = [{"id": p["id"], "name": p["name"], "value": _period_points(p["id"], mo, today)}
+             for p in players]
+    month.sort(key=lambda r: (-r["value"], r["name"].lower()))
+
+    drills = [{"id": p["id"], "name": p["name"], "value": _distinct_drills(p["id"])}
+              for p in players]
+    drills.sort(key=lambda r: (-r["value"], r["name"].lower()))
+
+    if limit:
+        alltime, week, month, drills = (alltime[:limit], week[:limit],
+                                        month[:limit], drills[:limit])
+    return {"alltime": alltime, "week": week, "month": month, "drills": drills}
+
+
 @app.route("/")
 def home():
     db = get_db()
@@ -723,13 +815,13 @@ def home():
         counts[row["section"]] = row["n"]
     me = current_player()
     stats = player_stats(me["id"]) if me else None
-    board = _scoreboard_rows()
+    boards = _all_boards()   # full lists; the home template shows top N + your rank
     bonus_drill = _bonus_drill()
     bonus_drill_section = (SECTION_BY_SLUG.get(bonus_drill["section"]) if bonus_drill else None)
     bonus_drill_done = bool(me and stats and stats["bonus_drill_today"])
     return render_template(
         "home.html", counts=counts, stats=stats,
-        board=board, my_id=(me["id"] if me else None),
+        boards=boards, my_id=(me["id"] if me else None),
         announcement=get_setting("announcement"),
         announcement_at=get_setting("announcement_at"),
         bonus_drill=bonus_drill, bonus_drill_section=bonus_drill_section,
@@ -1003,6 +1095,32 @@ def me():
     )
 
 
+@app.route("/me/profile", methods=["POST"])
+@player_required
+def me_profile():
+    """Player edits their own bio (name stays coach-managed)."""
+    p = current_player()
+
+    def clean(field, maxlen):
+        return ((request.form.get(field) or "").strip()[:maxlen]) or None
+
+    age = request.form.get("age", type=int)
+    if age is not None and not (4 <= age <= 25):
+        age = None
+    bats = (request.form.get("bats") or "").strip().upper()
+    bats = bats if bats in ("R", "L", "S") else None
+    throws = (request.form.get("throws") or "").strip().upper()
+    throws = throws if throws in ("R", "L") else None
+    get_db().execute(
+        "UPDATE players SET age=?, grade=?, height=?, weight=?, bats=?, throws=?, "
+        "positions=?, fav_team=? WHERE id=?",
+        (age, clean("grade", 20), clean("height", 20), clean("weight", 20),
+         bats, throws, clean("positions", 60), clean("fav_team", 40), p["id"]))
+    get_db().commit()
+    flash("Player profile saved.", "ok")
+    return redirect(url_for("me"))
+
+
 @app.route("/me/log", methods=["POST"])
 @player_required
 def me_log():
@@ -1101,7 +1219,7 @@ def scoreboard():
     me = current_player()
     return render_template(
         "scoreboard.html",
-        rows=_scoreboard_rows(),
+        boards=_all_boards(),
         my_id=(me["id"] if me else None),
     )
 
@@ -1213,10 +1331,11 @@ def coach_home():
         if days is None or days >= 3:
             slipping.append({"id": p["id"], "name": p["name"], "last": last, "days": days})
     slipping.sort(key=lambda x: x["days"] if x["days"] is not None else 9999, reverse=True)
+    pstats = {p["id"]: player_stats(p["id"]) for p in players}
     return render_template(
         "coach_home.html", players=players, activities=activities, comp=comp,
         slipping=slipping, announcement=get_setting("announcement"),
-        bonus_drill_id=_bonus_drill_id(),
+        bonus_drill_id=_bonus_drill_id(), pstats=pstats,
     )
 
 

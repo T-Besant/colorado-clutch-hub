@@ -1,29 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Scoreboard — {{ TEAM_SHORT }}{% endblock %}
 {% block body %}
-<h1>Team Scoreboard</h1>
-<p class="lead">Ranked by points — activities completed{% if BONUS_SECTION %} plus ⚡ {{ BONUS_SECTION_NAME }} daily bonuses{% endif %}.</p>
+<h1>Team Scoreboards</h1>
+<p class="lead">All-time points, this week, this month, and who's done the most different drills. Weekly and monthly reset on their own.</p>
 
-{% if not rows %}
-  <p class="empty">No players yet.</p>
-{% endif %}
+{% include "_boards.html" %}
 
-<table class="board">
-  <thead>
-    <tr><th>#</th><th>Player</th><th>Points</th><th>Streak</th></tr>
-  </thead>
-  <tbody>
-    {% for r in rows %}
-      <tr class="{{ 'meRow' if r.id == my_id else '' }}">
-        <td class="rank">
-          <span class="rankbadge {% if loop.index == 1 %}r1{% elif loop.index == 2 %}r2{% elif loop.index == 3 %}r3{% endif %}">{{ loop.index }}</span>
-        </td>
-        <td><a href="{{ url_for('player_profile', pid=r.id) }}">{{ r.name }}</a>{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
-        <td class="big">{{ r.total }}</td>
-        <td>{{ r.streak }}{% if r.streak > 0 %} 🔥{% endif %}</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-<p class="hint">“Points” = coach drills you checked off + your own logged activities{% if BONUS_SECTION %} + a ⚡ bonus for your first {{ BONUS_SECTION_NAME }} activity each day{% endif %} + a ⚡ bonus for the daily Bonus Drill.</p>
+<p class="hint">“Points” = coach drills you checked off + your own logged activities{% if BONUS_SECTION %} + a ⚡ bonus for your first {{ BONUS_SECTION_NAME }} activity each day{% endif %} + a ⚡ bonus for the daily Bonus Drill. The weekly/monthly boards count points earned in that period; the drills board counts each different drill once.</p>
 {% endblock %}

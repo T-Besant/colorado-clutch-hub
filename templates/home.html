@@ -15,7 +15,7 @@
       <span class="bd-label">Today's Bonus Drill</span>
       <span class="bd-title">{{ bonus_drill.title }}</span>
       <span class="bd-sub">{{ bonus_drill_section.name if bonus_drill_section else '' }} ·
-        {% if bonus_drill_done %}✓ bonus earned{% else %}complete it for +1 point{% endif %}</span>
+        {% if bonus_drill_done %}✓ bonus earned{% else %}complete it to earn an extra bonus point{% endif %}</span>
     </span>
     <span class="bd-go">{% if bonus_drill_done %}✓{% else %}Go →{% endif %}</span>
   </a>
@@ -39,34 +39,11 @@
 
 <div class="homelayout">
   <aside class="sbcol">
-    <div class="panel sbcard">
-      <div class="sbhead">
-        <h2>Scoreboard</h2>
-        <a class="seeall" href="{{ url_for('scoreboard') }}">See all →</a>
-      </div>
-      {% if board %}
-        <table class="board compact">
-          <thead>
-            <tr><th></th><th></th><th class="h-num">Pts</th><th class="h-num">Streak</th></tr>
-          </thead>
-          <tbody>
-            {% for r in board %}
-              {% set parts = r.name.split() %}
-              <tr class="{{ 'meRow' if r.id == my_id else '' }}">
-                <td class="rank">
-                  <span class="rankbadge {% if loop.index == 1 %}r1{% elif loop.index == 2 %}r2{% elif loop.index == 3 %}r3{% endif %}">{{ loop.index }}</span>
-                </td>
-                <td class="nm"><a href="{{ url_for('player_profile', pid=r.id) }}">{{ parts[0] }}{% if parts|length > 1 %} {{ parts[1][0] }}.{% endif %}</a>{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
-                <td class="big">{{ r.total }}</td>
-                <td class="stk">{{ r.streak }}{% if r.streak > 0 %}🔥{% endif %}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p class="empty small">No players yet.</p>
-      {% endif %}
+    <div class="sbhead">
+      <h2>Scoreboards</h2>
+      <a class="seeall" href="{{ url_for('scoreboard') }}">See all →</a>
     </div>
+    {% with board_limit=5 %}{% include "_boards.html" %}{% endwith %}
   </aside>
 
   <section class="drillcol">

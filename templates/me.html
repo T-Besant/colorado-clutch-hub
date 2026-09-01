@@ -38,6 +38,46 @@
 </section>
 {% endif %}
 
+<section class="panel">
+  <h2>My player profile</h2>
+  {% set has_bio = player.age or player.grade or player.height or player.weight or player.bats or player.throws or player.positions or player.fav_team %}
+  {% if has_bio %}
+    {% include "_bio.html" %}
+  {% else %}
+    <p class="muted">Fill in your player card so your teammates and coach can see it on your profile.</p>
+  {% endif %}
+  <details class="profedit">
+    <summary>{{ 'Edit my profile' if has_bio else 'Add my profile' }}</summary>
+    <form class="editform" method="post" action="{{ url_for('me_profile') }}">
+      <div class="row2">
+        <label>Grade <input name="grade" value="{{ player.grade or '' }}" maxlength="20" placeholder="e.g. 7th"></label>
+        <label>Age <input name="age" type="number" min="4" max="25" value="{{ player.age or '' }}" placeholder="e.g. 13"></label>
+      </div>
+      <div class="row2">
+        <label>Height <input name="height" value="{{ player.height or '' }}" maxlength="20" placeholder="e.g. 5'6&quot;"></label>
+        <label>Weight <input name="weight" value="{{ player.weight or '' }}" maxlength="20" placeholder="e.g. 130 lbs"></label>
+      </div>
+      <div class="row2">
+        <label>Bats
+          <select name="bats">
+            <option value="" {{ '' if player.bats else 'selected' }}>—</option>
+            {% for code, lbl in [('R','Right'), ('L','Left'), ('S','Switch')] %}<option value="{{ code }}" {{ 'selected' if player.bats == code else '' }}>{{ lbl }}</option>{% endfor %}
+          </select>
+        </label>
+        <label>Throws
+          <select name="throws">
+            <option value="" {{ '' if player.throws else 'selected' }}>—</option>
+            {% for code, lbl in [('R','Right'), ('L','Left')] %}<option value="{{ code }}" {{ 'selected' if player.throws == code else '' }}>{{ lbl }}</option>{% endfor %}
+          </select>
+        </label>
+      </div>
+      <label>Positions <input name="positions" value="{{ player.positions or '' }}" maxlength="60" placeholder="e.g. SS, 2B, P"></label>
+      <label>Favorite MLB team <input name="fav_team" value="{{ player.fav_team or '' }}" maxlength="40" placeholder="e.g. Colorado Rockies"></label>
+      <button class="btn small" type="submit">Save profile</button>
+    </form>
+  </details>
+</section>
+
 <section class="panel" id="logform">
   <h2>Log your own activity</h2>
   <p class="muted">Trained on your own? Log it here — it counts toward your total and streak.</p>

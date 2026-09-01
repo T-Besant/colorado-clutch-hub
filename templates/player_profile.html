@@ -15,6 +15,9 @@
   <div class="stat"><span class="num">{{ stats.week }}</span><span class="lbl">This week</span></div>
 </div>
 
+{% set _bio = player.age or player.grade or player.height or player.weight or player.bats or player.throws or player.positions or player.fav_team %}
+{% if _bio %}<section class="panel biopanel"><h2>Player profile</h2>{% include "_bio.html" %}</section>{% endif %}
+
 {% with focus_label=player.name.split()[0] ~ "'s focus" %}{% include "_focus.html" %}{% endwith %}
 
 {% include "_badges.html" %}

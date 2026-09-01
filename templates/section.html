@@ -62,7 +62,7 @@
       <span class="when">{{ a.created | nicedate }}</span>
     </div>
     {% if a.id == bonus_drill_id %}
-      <p class="bonusnote {{ 'earned' if (my and my.done) else '' }}">⚡ <strong>Today's Bonus Drill</strong> — {% if my and my.done %}done! bonus counted.{% else %}complete it for a bonus point.{% endif %}</p>
+      <p class="bonusnote {{ 'earned' if (my and my.done) else '' }}">⚡ <strong>Today's Bonus Drill</strong> — {% if my and my.done %}done! bonus counted.{% else %}complete it to earn an extra bonus point.{% endif %}</p>
     {% endif %}
     {% if a.notes %}<p class="notes">{{ a.notes }}</p>{% endif %}
     {{ embed_for(a.video_url) }}

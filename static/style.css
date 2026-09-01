@@ -143,6 +143,28 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .repsflag:hover { border-color: var(--blue); color: var(--blue); }
 .repsflag.on { color: #fff; background: var(--blue); border-color: var(--blue); }
 
+/* Stacked scoreboards (home + /scoreboard) */
+.boardcard { margin: 0 0 12px; padding: 12px 12px 8px; }
+.boardcard:last-child { margin-bottom: 0; }
+.boardcard-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.boardcard-head h3 { margin: 0; font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--navy); }
+.boardcard-note { font-size: .66rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.board .yourank td { border-top: 2px dashed #cfe0ee; }
+
+/* Per-player points/streak chips on the coach roster */
+.rosterstat { display: inline-block; font-size: .74rem; font-weight: 700; color: var(--muted);
+  background: var(--tint); border-radius: 999px; padding: 1px 8px; margin-left: 6px; white-space: nowrap; }
+.rosterstat.cold { background: #fdecea; color: var(--danger); }
+
+/* Player bio card */
+.biogrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px 14px; margin: 4px 0 0; }
+.bioitem dt { font-size: .68rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--muted); margin: 0; }
+.bioitem dd { margin: 1px 0 0; font-weight: 700; color: var(--navy); }
+.profedit { margin-top: 12px; }
+.profedit > summary { cursor: pointer; font-weight: 700; color: var(--blue); font-size: .9rem; }
+
 /* "Log it for a point" nudge on the player's own focus card */
 .focus-log {
   display: inline-block; margin: 10px 0 2px; cursor: pointer;

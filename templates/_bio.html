@@ -1,0 +1,15 @@
+{# Read-only player bio card. Expects `player`. Renders nothing if empty. #}
+{% set has_bio = player.age or player.grade or player.height or player.weight
+                 or player.bats or player.throws or player.positions or player.fav_team %}
+{% if has_bio %}
+<dl class="biogrid">
+  {% if player.grade %}<div class="bioitem"><dt>Grade</dt><dd>{{ player.grade }}</dd></div>{% endif %}
+  {% if player.age %}<div class="bioitem"><dt>Age</dt><dd>{{ player.age }}</dd></div>{% endif %}
+  {% if player.height %}<div class="bioitem"><dt>Height</dt><dd>{{ player.height }}</dd></div>{% endif %}
+  {% if player.weight %}<div class="bioitem"><dt>Weight</dt><dd>{{ player.weight }}</dd></div>{% endif %}
+  {% if player.bats %}<div class="bioitem"><dt>Bats</dt><dd>{{ HAND.get(player.bats, player.bats) }}</dd></div>{% endif %}
+  {% if player.throws %}<div class="bioitem"><dt>Throws</dt><dd>{{ HAND.get(player.throws, player.throws) }}</dd></div>{% endif %}
+  {% if player.positions %}<div class="bioitem"><dt>Positions</dt><dd>{{ player.positions }}</dd></div>{% endif %}
+  {% if player.fav_team %}<div class="bioitem"><dt>Favorite team</dt><dd>{{ player.fav_team }}</dd></div>{% endif %}
+</dl>
+{% endif %}

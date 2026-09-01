@@ -88,6 +88,10 @@
           <a href="{{ url_for('coach_player', pid=p.id) }}">{{ p.name }}</a>
           {% if p.pin_hash %}<span class="pinok" title="PIN set">🔒</span>
           {% else %}<span class="pinno" title="No PIN yet">— no PIN</span>{% endif %}
+          {% set st = pstats[p.id] %}
+          <span class="rosterstat" title="Points">{{ st.total }} pts</span>
+          <span class="rosterstat" title="Day streak">🔥 {{ st.streak }}</span>
+          {% if not st.did_today %}<span class="rosterstat cold" title="No activity today">💤 today</span>{% endif %}
         </span>
         <span class="rowacts">
           {% if p.pin_hash %}
