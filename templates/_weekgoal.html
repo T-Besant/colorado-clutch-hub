@@ -9,9 +9,9 @@
       <p class="wg-label">Weekly drill challenge{% if wg.met %} <span class="wg-done">✓ done</span>{% endif %}</p>
       <p class="wg-text">
         {% if wg.met %}
-          {{ wg_subj|default('You') }} completed {{ wg.done }} different app drills this week — bonus point earned ⚡
+          {{ wg_subj|default('You') }} completed {{ wg.done }} different video drills this week — bonus point earned ⚡
         {% else %}
-          <strong>{{ wg.done }} of {{ wg.goal }}</strong> different app drills this week{% if wg.remaining %} · {{ wg.remaining }} more for a ⚡ bonus point{% endif %}.
+          <strong>{{ wg.done }} of {{ wg.goal }}</strong> different video drills this week{% if wg.remaining %} · {{ wg.remaining }} more for a ⚡ bonus point{% endif %}.
         {% endif %}
       </p>
     </div>

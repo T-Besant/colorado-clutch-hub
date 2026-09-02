@@ -125,13 +125,53 @@
             {% if e.section %}<span class="muted">· {{ SECTIONS | selectattr('slug','equalto',e.section) | map(attribute='name') | first }}</span>{% endif %}
             {% if e.kind == 'drill' %}{% set rl = reps_label(e.rounds, e.reps) %}{% if rl %}<span class="reps">{{ rl }}</span>{% endif %}{% if e.note %}<span class="tl-note">“{{ e.note }}”</span>{% endif %}{% endif %}
           </span>
+        </div>
+        <div class="tl-manage">
           {% if e.kind == 'drill' %}
-            <form class="tl-act" method="post" action="{{ url_for('coach_completion_delete', pid=player.id) }}"
+            <details class="tl-edit">
+              <summary>edit</summary>
+              <form class="editform" method="post" action="{{ url_for('coach_completion_edit', pid=player.id) }}">
+                <input type="hidden" name="activity_id" value="{{ e.key.split(':')[0] }}">
+                <input type="hidden" name="done_on" value="{{ e.key.split(':', 1)[1] }}">
+                <input type="hidden" name="next" value="{{ url_for('coach_player', pid=player.id) }}">
+                <div class="row2">
+                  <label>Date <input type="date" name="new_done_on" value="{{ e.date }}"></label>
+                </div>
+                <div class="row2">
+                  <label>Rounds <input type="number" name="rounds" min="1" value="{{ e.rounds if e.rounds is not none else '' }}"></label>
+                  <label>Reps <input type="number" name="reps" min="1" value="{{ e.reps if e.reps is not none else '' }}"></label>
+                </div>
+                <label>Note <input name="note" maxlength="400" value="{{ e.note or '' }}"></label>
+                <button class="btn small" type="submit">Save changes</button>
+              </form>
+            </details>
+            <form class="tl-del" method="post" action="{{ url_for('coach_completion_delete', pid=player.id) }}"
                   onsubmit="return confirm('Reverse this completion? It will no longer count for {{ player.name.split()[0] }}.');">
               <input type="hidden" name="activity_id" value="{{ e.key.split(':')[0] }}">
               <input type="hidden" name="done_on" value="{{ e.key.split(':', 1)[1] }}">
               <input type="hidden" name="next" value="{{ url_for('coach_player', pid=player.id) }}">
               <button class="link-danger" type="submit">reverse</button>
+            </form>
+          {% else %}
+            <details class="tl-edit">
+              <summary>edit</summary>
+              <form class="editform" method="post" action="{{ url_for('coach_log_update', pid=player.id, lid=e.key) }}">
+                <label>Activity <input name="title" value="{{ e.title }}" required></label>
+                <div class="row2">
+                  <label>Type
+                    <select name="section">
+                      <option value="">— none —</option>
+                      {% for s in SECTIONS %}<option value="{{ s.slug }}" {{ 'selected' if s.slug == e.section else '' }}>{{ s.emoji }} {{ s.name }}</option>{% endfor %}
+                    </select>
+                  </label>
+                  <label>Date <input type="date" name="logged_on" value="{{ e.date }}"></label>
+                </div>
+                <button class="btn small" type="submit">Save changes</button>
+              </form>
+            </details>
+            <form class="tl-del" method="post" action="{{ url_for('coach_log_delete', pid=player.id, lid=e.key) }}"
+                  onsubmit="return confirm('Delete this logged activity?');">
+              <button class="link-danger" type="submit">delete</button>
             </form>
           {% endif %}
         </div>

@@ -247,6 +247,13 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 
 /* Reverse-completion button in the coach timeline */
 .tl-act { flex: none; margin: 0 0 0 auto; }
+/* Edit / delete controls under each timeline item */
+.tl-manage { display: flex; gap: 14px; align-items: flex-start; margin: 2px 0 0 104px; }
+@media (max-width: 480px) { .tl-manage { margin-left: 0; } }
+.tl-manage .tl-edit { flex: 1; min-width: 0; }
+.tl-manage .tl-edit > summary { cursor: pointer; color: var(--blue); font-weight: 600; font-size: .82rem; list-style: none; }
+.tl-manage .tl-edit > summary::-webkit-details-marker { display: none; }
+.tl-manage .tl-del { flex: none; }
 
 /* "Log your own activity" reminder on section pages */
 .selfnote {

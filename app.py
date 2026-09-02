@@ -971,7 +971,7 @@ def toggle():
     if now_done and WEEKLY_DRILL_GOAL and not met_week_before:
         wk_after = _weekly_goal_progress(_drill_weeks(me["id"]))
         if wk_after and wk_after["met"]:
-            flash(f"🎬 Weekly challenge complete! {WEEKLY_DRILL_GOAL} different app "
+            flash(f"🎬 Weekly challenge complete! {WEEKLY_DRILL_GOAL} different video "
                   f"drills this week (+1).", "ok")
     # Bonus drill of the day: earn/lose the point on complete/undo.
     if activity_id == _bonus_drill_id():
@@ -1689,6 +1689,51 @@ def coach_log_delete(pid, lid):
     get_db().commit()
     flash("Entry deleted.", "ok")
     return redirect(url_for("coach_player", pid=pid))
+
+
+@app.route("/coach/player/<int:pid>/completion/edit", methods=["POST"])
+@coach_required
+def coach_completion_edit(pid):
+    """Coach alters a player's drill completion — its date and/or rounds/reps/note."""
+    db = get_db()
+    aid = request.form.get("activity_id", type=int)
+    orig = (request.form.get("done_on") or "").strip()
+    nxt = request.form.get("next") or url_for("coach_player", pid=pid)
+    row = db.execute(
+        "SELECT * FROM completions WHERE activity_id=? AND player_id=? AND done_on=?",
+        (aid, pid, orig)).fetchone()
+    if row is None:
+        abort(404)
+    new_day = (request.form.get("new_done_on") or "").strip() or orig
+    try:
+        date.fromisoformat(new_day)
+    except ValueError:
+        new_day = orig
+    rounds = request.form.get("rounds", type=int)
+    reps = request.form.get("reps", type=int)
+    note = (request.form.get("note") or "").strip() or None
+    if rounds is not None and rounds < 1:
+        rounds = None
+    if reps is not None and reps < 1:
+        reps = None
+    if new_day == orig:
+        db.execute(
+            "UPDATE completions SET rounds=?, reps=?, note=? "
+            "WHERE activity_id=? AND player_id=? AND done_on=?",
+            (rounds, reps, note, aid, pid, orig))
+    else:
+        # Moving the day changes the primary key: delete the old, write the new
+        # (INSERT OR REPLACE merges if a completion already exists on that day).
+        db.execute("DELETE FROM completions WHERE activity_id=? AND player_id=? AND done_on=?",
+                   (aid, pid, orig))
+        db.execute(
+            "INSERT OR REPLACE INTO completions"
+            "(activity_id, player_id, done_on, done_at, rounds, reps, note) "
+            "VALUES(?,?,?,?,?,?,?)",
+            (aid, pid, new_day, row["done_at"], rounds, reps, note))
+    db.commit()
+    flash("Completion updated.", "ok")
+    return redirect(nxt)
 
 
 @app.route("/coach/player/<int:pid>/completion/delete", methods=["POST"])
