@@ -18,7 +18,7 @@ import os
 import re
 import sqlite3
 import urllib.parse
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from functools import wraps
 
 from flask import (
@@ -32,6 +32,46 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # DB location can be overridden with the HUB_DB env var; defaults to a file
 # next to the code (which is a persistent location on PythonAnywhere).
 DB_PATH = os.environ.get("HUB_DB") or os.path.join(BASE_DIR, "hub.db")
+
+# ---------------------------------------------------------------------------
+# Time — everything is anchored to Mountain time (America/Denver), NOT the
+# server clock. PythonAnywhere runs in UTC, so a bare today_mt()/now_mt()
+# rolls to the next day for anything logged after ~6pm MT. now_mt()/today_mt()
+# return the Mountain wall-clock (DST-aware), as NAIVE values so stored strings
+# keep their existing "YYYY-MM-DDTHH:MM:SS" shape (no tz suffix).
+# ---------------------------------------------------------------------------
+try:
+    from zoneinfo import ZoneInfo
+    _MT_ZONE = ZoneInfo("America/Denver")
+except Exception:               # no IANA tz db and no tzdata package
+    _MT_ZONE = None
+
+
+def _mt_offset_hours(utc_dt):
+    """US Mountain UTC offset (-6 MDT / -7 MST) for a UTC datetime, using the
+    fixed US DST rules (2nd Sun Mar 02:00 → 1st Sun Nov 02:00). Fallback only
+    when zoneinfo is unavailable."""
+    y = utc_dt.year
+    def nth_sunday(month, n):
+        d = date(y, month, 1)
+        d += timedelta(days=(6 - d.weekday()) % 7)      # first Sunday
+        return d + timedelta(weeks=n - 1)
+    dst_start = datetime(y, 3, nth_sunday(3, 2).day, 9, tzinfo=timezone.utc)   # 2am MST = 09:00 UTC
+    dst_end = datetime(y, 11, nth_sunday(11, 1).day, 8, tzinfo=timezone.utc)   # 2am MDT = 08:00 UTC
+    return -6 if dst_start <= utc_dt < dst_end else -7
+
+
+def now_mt():
+    """Current Mountain wall-clock time as a naive datetime."""
+    utc = datetime.now(timezone.utc)
+    if _MT_ZONE is not None:
+        return utc.astimezone(_MT_ZONE).replace(tzinfo=None)
+    return (utc + timedelta(hours=_mt_offset_hours(utc))).replace(tzinfo=None)
+
+
+def today_mt():
+    """Today's date in Mountain time."""
+    return now_mt().date()
 
 
 def _secret_key():
@@ -502,7 +542,7 @@ def _streak(dates):
     per rolling week (a single missed day won't reset it)."""
     if not dates:
         return 0
-    today = date.today()
+    today = today_mt()
     if today in dates:
         anchor = today
     elif (today - timedelta(days=1)) in dates:
@@ -567,7 +607,7 @@ def _bonus_today_count(pid):
     """How many BONUS_SECTION activities the player has done today."""
     if not BONUS_SECTION:
         return 0
-    today = date.today().isoformat()
+    today = today_mt().isoformat()
     db = get_db()
     c = db.execute(
         "SELECT COUNT(*) n FROM completions c JOIN activities a ON a.id=c.activity_id "
@@ -610,7 +650,7 @@ def _bonus_drill_done_today(pid):
         return False
     return bool(get_db().execute(
         "SELECT 1 FROM bonus_awards WHERE player_id=? AND day=? AND activity_id=?",
-        (pid, date.today().isoformat(), bid)).fetchone())
+        (pid, today_mt().isoformat(), bid)).fetchone())
 
 
 def _drill_weeks(pid):
@@ -638,7 +678,7 @@ def _weekly_goal_progress(weeks):
     """This week's challenge status for the tracker, or None if disabled."""
     if not WEEKLY_DRILL_GOAL:
         return None
-    n = len(weeks.get(date.today().isocalendar()[:2], set()))
+    n = len(weeks.get(today_mt().isocalendar()[:2], set()))
     goal = WEEKLY_DRILL_GOAL
     return {
         "done": n,
@@ -658,7 +698,7 @@ def player_stats(pid):
         "SELECT COUNT(*) n FROM personal_logs WHERE player_id=?", (pid,)
     ).fetchone()["n"]
     dates = _activity_dates(pid)
-    week_start = (date.today() - timedelta(days=6)).isoformat()
+    week_start = (today_mt() - timedelta(days=6)).isoformat()
     week = db.execute(
         "SELECT COUNT(*) n FROM completions WHERE player_id=? AND done_on>=?",
         (pid, week_start),
@@ -677,7 +717,7 @@ def player_stats(pid):
         "total": drills + personal + bonus,   # the score (activities + bonus)
         "streak": _streak(dates),
         "active_days": len(dates),
-        "did_today": date.today() in dates,
+        "did_today": today_mt() in dates,
         "bonus_today": _bonus_today_count(pid) > 0,
         "bonus_drill_today": _bonus_drill_done_today(pid),
         "weekly_goal": _weekly_goal_progress(weeks),
@@ -769,12 +809,12 @@ def _distinct_drills(pid):
 
 
 def _week_start():
-    today = date.today()
+    today = today_mt()
     return today - timedelta(days=today.weekday())        # Monday of this week
 
 
 def _month_start():
-    return date.today().replace(day=1)
+    return today_mt().replace(day=1)
 
 
 def _all_boards(limit=None):
@@ -782,7 +822,7 @@ def _all_boards(limit=None):
     different drills. Each is a list of dicts sorted best-first."""
     db = get_db()
     players = db.execute("SELECT id, name FROM players WHERE active=1").fetchall()
-    today = date.today().isoformat()
+    today = today_mt().isoformat()
     wk, mo = _week_start().isoformat(), _month_start().isoformat()
 
     alltime = _scoreboard_rows()
@@ -842,7 +882,7 @@ def section(slug):
         "SELECT * FROM players WHERE active=1 ORDER BY name COLLATE NOCASE"
     ).fetchall()
     me = current_player()
-    today = date.today().isoformat()
+    today = today_mt().isoformat()
     done = {}      # activity_id -> set of players "done" (today if repeatable, else ever)
     mine = {}      # activity_id -> {done, times, streak} for the logged-in player
     for a in activities:
@@ -920,7 +960,7 @@ def toggle():
         (activity_id,)).fetchone()
     if act is None:
         abort(404)
-    today = date.today().isoformat()
+    today = today_mt().isoformat()
     # Weekly drill challenge: note whether the goal was already met before this
     # toggle, so we can congratulate only on the completion that reaches it.
     wk_before = _weekly_goal_progress(_drill_weeks(me["id"]))
@@ -960,7 +1000,7 @@ def toggle():
             "(activity_id, player_id, done_on, done_at, rounds, reps, note) "
             "VALUES(?,?,?,?,?,?,?)",
             (activity_id, me["id"], today,
-             datetime.now().isoformat(timespec="seconds"), rounds, reps, note))
+             now_mt().isoformat(timespec="seconds"), rounds, reps, note))
         now_done = True
     db.commit()
     # Daily bonus: first Speed & Agility activity of the day earns +1.
@@ -1090,7 +1130,7 @@ def me():
         db.commit()
     return render_template(
         "me.html", player=p, stats=stats, logs=logs, recent=recent, notes=notes,
-        badges=player_badges(p["id"]), today=date.today().isoformat(),
+        badges=player_badges(p["id"]), today=today_mt().isoformat(),
         focus=focus, focus_new=focus_new, focus_history=focus_history(p["id"]),
     )
 
@@ -1129,21 +1169,21 @@ def me_log():
     sec = request.form.get("section") or None
     if sec not in SECTION_BY_SLUG:
         sec = None
-    when = (request.form.get("logged_on") or "").strip() or date.today().isoformat()
+    when = (request.form.get("logged_on") or "").strip() or today_mt().isoformat()
     try:
         date.fromisoformat(when)
     except ValueError:
-        when = date.today().isoformat()
+        when = today_mt().isoformat()
     if not title:
         flash("Give your activity a name.", "error")
         return redirect(url_for("me"))
     get_db().execute(
         "INSERT INTO personal_logs(player_id, title, section, logged_on, created) VALUES(?,?,?,?,?)",
-        (p["id"], title, sec, when, datetime.now().isoformat(timespec="seconds")),
+        (p["id"], title, sec, when, now_mt().isoformat(timespec="seconds")),
     )
     get_db().commit()
     # Daily bonus if this is their first Speed & Agility activity today.
-    if (BONUS_SECTION and sec == BONUS_SECTION and when == date.today().isoformat()
+    if (BONUS_SECTION and sec == BONUS_SECTION and when == today_mt().isoformat()
             and _bonus_today_count(p["id"]) == 1):
         flash(f"⚡ Bonus point! First {BONUS_SECTION_NAME} activity today (+1).", "ok")
     else:
@@ -1169,11 +1209,11 @@ def _clean_log_fields():
     sec = request.form.get("section") or None
     if sec not in SECTION_BY_SLUG:
         sec = None
-    when = (request.form.get("logged_on") or "").strip() or date.today().isoformat()
+    when = (request.form.get("logged_on") or "").strip() or today_mt().isoformat()
     try:
         date.fromisoformat(when)
     except ValueError:
-        when = date.today().isoformat()
+        when = today_mt().isoformat()
     return title, sec, when
 
 
@@ -1318,7 +1358,7 @@ def coach_home():
     ):
         comp[r["activity_id"]] = r["n"]
     # "Who's slipping" — active players with no activity in 3+ days (or never).
-    today = date.today()
+    today = today_mt()
     slipping = []
     for p in players:
         last = db.execute(
@@ -1378,7 +1418,7 @@ def coach_backup():
         except OSError:
             pass
     slug = "".join(ch for ch in TEAM_SHORT.lower() if ch.isalnum()) or "team"
-    fname = f"{slug}_backup_{date.today().isoformat()}.db"
+    fname = f"{slug}_backup_{today_mt().isoformat()}.db"
     return Response(
         data, mimetype="application/x-sqlite3",
         headers={"Content-Disposition": f"attachment; filename={fname}"},
@@ -1392,7 +1432,7 @@ def coach_announce():
     msg = (request.form.get("announcement") or "").strip()
     db = get_db()
     if msg:
-        now = datetime.now().isoformat(timespec="seconds")
+        now = now_mt().isoformat(timespec="seconds")
         db.execute("INSERT INTO settings(key,value) VALUES('announcement',?) "
                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (msg,))
         db.execute("INSERT INTO settings(key,value) VALUES('announcement_at',?) "
@@ -1421,7 +1461,7 @@ def activity_new():
         "INSERT INTO activities(section, title, notes, video_url, repeatable, require_reps, created) "
         "VALUES(?,?,?,?,?,?,?)",
         (section, title, notes, video, repeatable, require_reps,
-         datetime.now().isoformat(timespec="seconds")),
+         now_mt().isoformat(timespec="seconds")),
     )
     get_db().commit()
     flash("Posted!", "ok")
@@ -1460,7 +1500,7 @@ def player_new():
     if name:
         get_db().execute(
             "INSERT INTO players(name, created) VALUES(?,?)",
-            (name, datetime.now().isoformat(timespec="seconds")),
+            (name, now_mt().isoformat(timespec="seconds")),
         )
         get_db().commit()
         flash(f"Added {name}.", "ok")
@@ -1587,7 +1627,7 @@ def coach_comment():
     get_db().execute(
         "INSERT INTO feed_comments(player_id, item_kind, item_key, body, created) "
         "VALUES(?,?,?,?,?)",
-        (pid, kind, key, body, datetime.now().isoformat(timespec="seconds")),
+        (pid, kind, key, body, now_mt().isoformat(timespec="seconds")),
     )
     get_db().commit()
     flash("Note added — the player will see it on their page.", "ok")
@@ -1617,7 +1657,7 @@ def coach_focus(pid):
         abort(404)
     nxt = request.form.get("next") or url_for("coach_player", pid=pid)
     action = request.form.get("action", "save")
-    now = datetime.now().isoformat(timespec="seconds")
+    now = now_mt().isoformat(timespec="seconds")
     current = get_focus(pid)
 
     if action in ("new", "clear"):
@@ -1808,7 +1848,7 @@ def activity_detail(aid):
 @coach_required
 def coach_today():
     db = get_db()
-    today = date.today().isoformat()
+    today = today_mt().isoformat()
     players = db.execute(
         "SELECT * FROM players WHERE active=1 ORDER BY name COLLATE NOCASE"
     ).fetchall()
