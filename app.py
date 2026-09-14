@@ -817,6 +817,24 @@ def _month_start():
     return today_mt().replace(day=1)
 
 
+def last_week_winner():
+    """Top scorer of the previous complete ISO week (Mon–Sun), or None if nobody
+    scored. Ties break by name (same order as the boards)."""
+    ws = _week_start()
+    start = (ws - timedelta(days=7)).isoformat()
+    end = (ws - timedelta(days=1)).isoformat()
+    best = None
+    for p in get_db().execute("SELECT id, name FROM players WHERE active=1"):
+        v = _period_points(p["id"], start, end)
+        if v > 0 and (best is None or v > best["value"]
+                      or (v == best["value"] and p["name"].lower() < best["name"].lower())):
+            best = {"id": p["id"], "name": p["name"], "value": v}
+    return best
+
+
+app.jinja_env.globals["last_week_winner"] = last_week_winner
+
+
 def _all_boards(limit=None):
     """Build every scoreboard: all-time points, this week, this month, and most
     different drills. Each is a list of dicts sorted best-first."""

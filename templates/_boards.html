@@ -46,6 +46,9 @@
       <h3>{{ d.title }}</h3>
       {% if d.note %}<span class="boardcard-note">{{ d.note }}</span>{% endif %}
     </div>
+    {% if d.key == 'week' %}{% set lww = last_week_winner() %}{% if lww %}
+      <div class="lastweek"><span class="lw-tag">🏆 Last week</span> <strong>{{ lww.name.split()[0] }}{% if lww.name.split()|length > 1 %} {{ lww.name.split()[1][0] }}.{% endif %}</strong> · {{ lww.value }} pts</div>
+    {% endif %}{% endif %}
     {{ board_table(boards[d.key], d.val, d.lbl, d.streak, my_id, board_limit|default(none)) }}
   </div>
 {% endfor %}
