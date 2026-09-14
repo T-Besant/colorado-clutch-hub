@@ -19,5 +19,19 @@
   <div class="wg-pips" aria-hidden="true">
     {% for i in range(wg.goal) %}<span class="wg-pip{{ ' on' if i < wg.done else '' }}"></span>{% endfor %}
   </div>
+  {% set secret = secret_video_url() %}
+  {% if secret %}
+    {% if wg.met %}
+      <div class="secretvid unlocked">
+        <p class="sv-label">🔓 Top Secret Bonus Video — unlocked!</p>
+        {{ embed_for(secret) }}
+      </div>
+    {% else %}
+      <div class="secretvid locked">
+        <span class="sv-lock">🔒</span>
+        <span>Finish the weekly challenge to unlock this week's <strong>Top Secret Bonus Video</strong>.</span>
+      </div>
+    {% endif %}
+  {% endif %}
 </section>
 {% endif %}

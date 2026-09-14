@@ -323,6 +323,11 @@ def get_setting(key, default=None):
     return row["value"] if row else default
 
 
+# Coach-set reward: a "Top Secret Bonus Video" that unlocks on a player's page
+# once they complete that week's drill challenge (resets weekly with the challenge).
+app.jinja_env.globals["secret_video_url"] = lambda: get_setting("secret_video_url")
+
+
 # ---------------------------------------------------------------------------
 # Video embedding — turn a pasted share link into an inline player.
 # ---------------------------------------------------------------------------
@@ -1464,6 +1469,23 @@ def coach_bonus_drill():
     else:
         db.execute("DELETE FROM settings WHERE key='bonus_drill_id'")
         flash("Bonus drill cleared.", "ok")
+    db.commit()
+    return redirect(url_for("coach_home"))
+
+
+@app.route("/coach/secretvideo", methods=["POST"])
+@coach_required
+def coach_secret_video():
+    """Set or clear the 'Top Secret Bonus Video' unlocked by the weekly challenge."""
+    url = (request.form.get("secret_video_url") or "").strip()
+    db = get_db()
+    if url:
+        db.execute("INSERT INTO settings(key,value) VALUES('secret_video_url',?) "
+                   "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (url,))
+        flash("Top Secret Bonus Video set.", "ok")
+    else:
+        db.execute("DELETE FROM settings WHERE key='secret_video_url'")
+        flash("Top Secret Bonus Video cleared.", "ok")
     db.commit()
     return redirect(url_for("coach_home"))
 

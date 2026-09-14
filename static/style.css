@@ -119,6 +119,12 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 .wg-pip { width: 22px; height: 10px; border-radius: 999px; background: #d9e6f2; flex: none; }
 .wg-pip.on { background: var(--blue); }
 .weekgoal.met .wg-pip.on { background: #2e7d47; }
+/* Top Secret Bonus Video (weekly-challenge reward) */
+.secretvid { margin-top: 12px; }
+.secretvid.locked { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px dashed #b7c6d6; border-radius: 10px; background: #f4f8fc; color: var(--muted); font-size: .9rem; }
+.secretvid .sv-lock { font-size: 1.2rem; flex: none; }
+.secretvid.unlocked .sv-label { margin: 0 0 8px; font-weight: 800; color: #2e7d47; font-size: .9rem; }
 
 /* Rounds/reps logging on a drill (accountability) */
 .repsform { display: block; }

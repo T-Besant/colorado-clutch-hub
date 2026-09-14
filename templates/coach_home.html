@@ -41,6 +41,23 @@
 </section>
 
 <section class="panel">
+  <h2>🕵️ Top Secret Bonus Video</h2>
+  <p class="muted">Paste a fun YouTube link (top plays, bloopers, etc.). It stays locked on each player's page until they finish that week's drill challenge, then unlocks. Relocks next week — set a fresh one to keep it exciting.</p>
+  {% set secret = secret_video_url() %}
+  <form method="post" action="{{ url_for('coach_secret_video') }}">
+    <label>Video link <input name="secret_video_url" value="{{ secret or '' }}" placeholder="Paste a YouTube / Facebook / Instagram link"></label>
+    <button class="btn small" type="submit">{{ 'Update' if secret else 'Set' }} secret video</button>
+  </form>
+  {% if secret %}
+    <div class="secretvid unlocked" style="margin-top:10px">{{ embed_for(secret) }}</div>
+    <form method="post" action="{{ url_for('coach_secret_video') }}" class="clearann">
+      <input type="hidden" name="secret_video_url" value="">
+      <button class="link-danger" type="submit">Clear secret video</button>
+    </form>
+  {% endif %}
+</section>
+
+<section class="panel">
   <h2>🏆 Past winners</h2>
   {% if not weekly_winners and not monthly_winners %}
     <p class="empty small">No completed weeks or months yet — winners appear here after each one ends.</p>
