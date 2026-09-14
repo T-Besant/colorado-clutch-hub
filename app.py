@@ -852,7 +852,7 @@ def _week_label(a, b):
     return f"{s}–{e}"
 
 
-def past_weekly_winners(limit=10):
+def past_weekly_winners(limit=26):
     """Winner of each COMPLETED ISO week (newest first). Current week excluded."""
     first = _earliest_activity_day()
     if not first:
@@ -869,7 +869,7 @@ def past_weekly_winners(limit=10):
     return out
 
 
-def past_monthly_winners(limit=12):
+def past_monthly_winners(limit=24):
     """Winner of each COMPLETED calendar month (newest first). Current month excluded."""
     first = _earliest_activity_day()
     if not first:

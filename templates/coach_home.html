@@ -49,25 +49,35 @@
     {% if weekly_winners %}
     <div class="winnercol">
       <h3 class="drillsec">Weekly</h3>
-      <ul class="winnerlist">
-        {% for w in weekly_winners %}
-          <li><span class="wl-when">{{ w.label }}</span>
-            <span class="wl-who"><a href="{{ url_for('coach_player', pid=w.winner.id) }}">{{ w.winner.name }}</a></span>
-            <span class="wl-pts">{{ w.winner.value }} pts</span></li>
-        {% endfor %}
-      </ul>
+      <table class="tbl winnertbl">
+        <thead><tr><th>Week</th><th>Winner</th><th class="wl-pts">Pts</th></tr></thead>
+        <tbody>
+          {% for w in weekly_winners %}
+            <tr>
+              <td class="wl-when">{{ w.label }}</td>
+              <td><a href="{{ url_for('coach_player', pid=w.winner.id) }}">{{ w.winner.name }}</a></td>
+              <td class="wl-pts">{{ w.winner.value }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% endif %}
     {% if monthly_winners %}
     <div class="winnercol">
       <h3 class="drillsec">Monthly</h3>
-      <ul class="winnerlist">
-        {% for w in monthly_winners %}
-          <li><span class="wl-when">{{ w.label }}</span>
-            <span class="wl-who"><a href="{{ url_for('coach_player', pid=w.winner.id) }}">{{ w.winner.name }}</a></span>
-            <span class="wl-pts">{{ w.winner.value }} pts</span></li>
-        {% endfor %}
-      </ul>
+      <table class="tbl winnertbl">
+        <thead><tr><th>Month</th><th>Winner</th><th class="wl-pts">Pts</th></tr></thead>
+        <tbody>
+          {% for w in monthly_winners %}
+            <tr>
+              <td class="wl-when">{{ w.label }}</td>
+              <td><a href="{{ url_for('coach_player', pid=w.winner.id) }}">{{ w.winner.name }}</a></td>
+              <td class="wl-pts">{{ w.winner.value }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% endif %}
   </div>
