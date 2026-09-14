@@ -817,12 +817,9 @@ def _month_start():
     return today_mt().replace(day=1)
 
 
-def last_week_winner():
-    """Top scorer of the previous complete ISO week (Mon–Sun), or None if nobody
+def _winner_for(start, end):
+    """Top _period_points scorer in [start, end] (ISO strings), or None if nobody
     scored. Ties break by name (same order as the boards)."""
-    ws = _week_start()
-    start = (ws - timedelta(days=7)).isoformat()
-    end = (ws - timedelta(days=1)).isoformat()
     best = None
     for p in get_db().execute("SELECT id, name FROM players WHERE active=1"):
         v = _period_points(p["id"], start, end)
@@ -830,6 +827,62 @@ def last_week_winner():
                       or (v == best["value"] and p["name"].lower() < best["name"].lower())):
             best = {"id": p["id"], "name": p["name"], "value": v}
     return best
+
+
+def last_week_winner():
+    """Top scorer of the previous complete ISO week (Mon–Sun), or None."""
+    ws = _week_start()
+    return _winner_for((ws - timedelta(days=7)).isoformat(), (ws - timedelta(days=1)).isoformat())
+
+
+def _earliest_activity_day():
+    """Earliest day with any completion or self-log, as a date, or None."""
+    row = get_db().execute(
+        "SELECT MIN(d) m FROM (SELECT MIN(done_on) d FROM completions "
+        "UNION ALL SELECT MIN(logged_on) FROM personal_logs)").fetchone()
+    try:
+        return date.fromisoformat(row["m"][:10]) if row and row["m"] else None
+    except (ValueError, TypeError):
+        return None
+
+
+def _week_label(a, b):
+    s = f"{a.strftime('%b')} {a.day}"
+    e = f"{b.day}" if a.month == b.month else f"{b.strftime('%b')} {b.day}"
+    return f"{s}–{e}"
+
+
+def past_weekly_winners(limit=10):
+    """Winner of each COMPLETED ISO week (newest first). Current week excluded."""
+    first = _earliest_activity_day()
+    if not first:
+        return []
+    first_mon = first - timedelta(days=first.weekday())
+    out = []
+    wk = _week_start() - timedelta(days=7)          # last completed week
+    while wk >= first_mon and len(out) < limit:
+        end = wk + timedelta(days=6)
+        w = _winner_for(wk.isoformat(), end.isoformat())
+        if w:
+            out.append({"label": _week_label(wk, end), "winner": w})
+        wk -= timedelta(days=7)
+    return out
+
+
+def past_monthly_winners(limit=12):
+    """Winner of each COMPLETED calendar month (newest first). Current month excluded."""
+    first = _earliest_activity_day()
+    if not first:
+        return []
+    out = []
+    m = (_month_start() - timedelta(days=1)).replace(day=1)   # last completed month
+    while (m.year, m.month) >= (first.year, first.month) and len(out) < limit:
+        end = (m.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+        w = _winner_for(m.isoformat(), end.isoformat())
+        if w:
+            out.append({"label": m.strftime("%B %Y"), "winner": w})
+        m = (m - timedelta(days=1)).replace(day=1)
+    return out
 
 
 app.jinja_env.globals["last_week_winner"] = last_week_winner
@@ -1394,6 +1447,7 @@ def coach_home():
         "coach_home.html", players=players, activities=activities, comp=comp,
         slipping=slipping, announcement=get_setting("announcement"),
         bonus_drill_id=_bonus_drill_id(), pstats=pstats,
+        weekly_winners=past_weekly_winners(), monthly_winners=past_monthly_winners(),
     )
 
 

@@ -159,6 +159,15 @@ h2 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; margin: 1em 0
 }
 .lastweek .lw-tag { font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: .64rem; color: #a9812a; }
 .lastweek strong { color: var(--navy); }
+/* Past winners (coach dashboard) */
+.winnercols { display: grid; grid-template-columns: 1fr; gap: 8px 24px; }
+@media (min-width: 560px) { .winnercols { grid-template-columns: 1fr 1fr; } }
+.winnerlist { list-style: none; margin: 4px 0 0; padding: 0; }
+.winnerlist li { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.winnerlist li:last-child { border-bottom: 0; }
+.wl-when { flex: none; width: 88px; color: var(--muted); font-size: .82rem; }
+.wl-who { flex: 1; min-width: 0; font-weight: 600; }
+.wl-pts { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Per-player points/streak chips on the coach roster */
 .rosterstat { display: inline-block; font-size: .74rem; font-weight: 700; color: var(--muted);
