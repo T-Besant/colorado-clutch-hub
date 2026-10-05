@@ -16,7 +16,7 @@
   </p>
 {% endif %}
 
-{% include "_weekgoal.html" %}
+{% with wg_own=True, secret_viewed=secret_viewed %}{% include "_weekgoal.html" %}{% endwith %}
 <p class="todaynote {{ 'good' if stats.did_today else 'warn' }}">
   {% if stats.did_today %}You've logged activity today — your streak is safe.{% else %}No activity logged today yet — your streak allows one rest day a week, so don't let it slip two days in a row.{% endif %}
 </p>

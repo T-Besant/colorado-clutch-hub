@@ -22,9 +22,15 @@
   {% set secret = secret_video_url() %}
   {% if secret %}
     {% if wg.met %}
-      <div class="secretvid unlocked">
+      <div class="secretvid unlocked" id="secret">
         <p class="sv-label">🔓 Top Secret Bonus Video — unlocked!</p>
-        {{ embed_for(secret) }}
+        {% if wg_own and not secret_viewed %}
+          <form method="post" action="{{ url_for('me_secret_view') }}">
+            <button class="btn" type="submit">▶ Reveal &amp; watch the Top Secret Video</button>
+          </form>
+        {% else %}
+          {{ embed_for(secret) }}
+        {% endif %}
       </div>
     {% else %}
       <div class="secretvid locked">

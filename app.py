@@ -256,6 +256,17 @@ def init_db():
             FOREIGN KEY (player_id)   REFERENCES players(id)    ON DELETE CASCADE,
             FOREIGN KEY (activity_id) REFERENCES activities(id) ON DELETE CASCADE
         );
+
+        -- Who earned (unlocked) and viewed each "Top Secret Bonus Video", keyed
+        -- by the video URL so it resets when the coach swaps in a new video.
+        CREATE TABLE IF NOT EXISTS secret_unlocks (
+            player_id INTEGER NOT NULL,
+            video_url TEXT NOT NULL,
+            earned_at TEXT NOT NULL,
+            viewed_at TEXT,
+            PRIMARY KEY (player_id, video_url),
+            FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
+        );
         """
     )
     # Migration: add pin_hash to an older players table if it's missing.
@@ -656,6 +667,56 @@ def _bonus_drill_done_today(pid):
     return bool(get_db().execute(
         "SELECT 1 FROM bonus_awards WHERE player_id=? AND day=? AND activity_id=?",
         (pid, today_mt().isoformat(), bid)).fetchone())
+
+
+def _record_secret_earn(pid):
+    """If a secret video is set and this player has met this week's drill
+    challenge, record that they earned it (idempotent per video URL)."""
+    url = get_setting("secret_video_url")
+    if not url:
+        return
+    wg = _weekly_goal_progress(_drill_weeks(pid))
+    if wg and wg["met"]:
+        db = get_db()
+        db.execute(
+            "INSERT OR IGNORE INTO secret_unlocks(player_id, video_url, earned_at) VALUES(?,?,?)",
+            (pid, url, datetime.now().isoformat(timespec="seconds")))
+        db.commit()
+
+
+def _secret_viewed(pid, url):
+    """Has this player viewed the current secret video?"""
+    if not url:
+        return False
+    return bool(get_db().execute(
+        "SELECT 1 FROM secret_unlocks WHERE player_id=? AND video_url=? AND viewed_at IS NOT NULL",
+        (pid, url)).fetchone())
+
+
+def _secret_roster():
+    """For the CURRENT secret video: each active player's earned/viewed status.
+    Returns (url, rows, earned_count, viewed_count)."""
+    url = get_setting("secret_video_url")
+    db = get_db()
+    players = db.execute(
+        "SELECT id, name FROM players WHERE active=1 ORDER BY name COLLATE NOCASE").fetchall()
+    unlocks = {}
+    if url:
+        for r in db.execute(
+            "SELECT player_id, earned_at, viewed_at FROM secret_unlocks WHERE video_url=?", (url,)):
+            unlocks[r["player_id"]] = (r["earned_at"], r["viewed_at"])
+    rows, earned, viewed = [], 0, 0
+    for p in players:
+        u = unlocks.get(p["id"])
+        if u:
+            earned += 1
+            if u[1]:
+                viewed += 1
+        rows.append({"id": p["id"], "name": p["name"],
+                     "earned_at": u[0] if u else None,
+                     "viewed_at": u[1] if u else None})
+    rows.sort(key=lambda r: (r["earned_at"] is None, r["viewed_at"] is not None, r["earned_at"] or ""))
+    return url, rows, earned, viewed
 
 
 def _drill_weeks(pid):
@@ -1089,6 +1150,9 @@ def toggle():
         if wk_after and wk_after["met"]:
             flash(f"🎬 Weekly challenge complete! {WEEKLY_DRILL_GOAL} different video "
                   f"drills this week (+1).", "ok")
+            if get_setting("secret_video_url"):
+                flash("🔓 Top Secret Bonus Video unlocked — check your page!", "ok")
+    _record_secret_earn(me["id"])
     # Bonus drill of the day: earn/lose the point on complete/undo.
     if activity_id == _bonus_drill_id():
         if now_done:
@@ -1204,11 +1268,31 @@ def me():
     if focus_new:
         db.execute("UPDATE player_focus SET seen=1 WHERE player_id=?", (p["id"],))
         db.commit()
+    _record_secret_earn(p["id"])
+    secret_url = get_setting("secret_video_url")
     return render_template(
         "me.html", player=p, stats=stats, logs=logs, recent=recent, notes=notes,
         badges=player_badges(p["id"]), today=today_mt().isoformat(),
         focus=focus, focus_new=focus_new, focus_history=focus_history(p["id"]),
+        secret_viewed=_secret_viewed(p["id"], secret_url),
     )
+
+
+@app.route("/me/secret/view", methods=["POST"])
+@player_required
+def me_secret_view():
+    """Record that the player watched the current Top Secret Bonus Video."""
+    p = current_player()
+    url = get_setting("secret_video_url")
+    if url:
+        now = datetime.now().isoformat(timespec="seconds")
+        db = get_db()
+        db.execute("INSERT OR IGNORE INTO secret_unlocks(player_id, video_url, earned_at) VALUES(?,?,?)",
+                   (p["id"], url, now))
+        db.execute("UPDATE secret_unlocks SET viewed_at=? WHERE player_id=? AND video_url=? "
+                   "AND viewed_at IS NULL", (now, p["id"], url))
+        db.commit()
+    return redirect(url_for("me") + "#secret")
 
 
 @app.route("/me/profile", methods=["POST"])
@@ -1448,11 +1532,16 @@ def coach_home():
             slipping.append({"id": p["id"], "name": p["name"], "last": last, "days": days})
     slipping.sort(key=lambda x: x["days"] if x["days"] is not None else 9999, reverse=True)
     pstats = {p["id"]: player_stats(p["id"]) for p in players}
+    for p in players:            # catch any earns before the player opens their page
+        _record_secret_earn(p["id"])
+    secret_url, secret_rows, secret_earned, secret_viewed = _secret_roster()
     return render_template(
         "coach_home.html", players=players, activities=activities, comp=comp,
         slipping=slipping, announcement=get_setting("announcement"),
         bonus_drill_id=_bonus_drill_id(), pstats=pstats,
         weekly_winners=past_weekly_winners(), monthly_winners=past_monthly_winners(),
+        secret_url=secret_url, secret_rows=secret_rows,
+        secret_earned=secret_earned, secret_viewed=secret_viewed,
     )
 
 

@@ -54,6 +54,28 @@
       <input type="hidden" name="secret_video_url" value="">
       <button class="link-danger" type="submit">Clear secret video</button>
     </form>
+
+    <h3 class="secrethdr">
+      Who's earned this video
+      <span class="secretcount {{ 'hot' if secret_earned else '' }}">{{ secret_earned }} earned · {{ secret_viewed }} viewed</span>
+    </h3>
+    {% if secret_earned %}
+      <p class="muted">Someone's earned it — swap in a fresh video to keep it a surprise.</p>
+    {% else %}
+      <p class="muted">No one has unlocked it yet this video.</p>
+    {% endif %}
+    <table class="tbl">
+      <thead><tr><th>Player</th><th>Earned</th><th>Viewed</th></tr></thead>
+      <tbody>
+        {% for r in secret_rows %}
+          <tr>
+            <td><a href="{{ url_for('coach_player', pid=r.id) }}">{{ r.name }}</a></td>
+            <td>{% if r.earned_at %}✅ <span class="muted">{{ r.earned_at | nicedate }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% if r.viewed_at %}👁️ <span class="muted">{{ r.viewed_at | nicedate }}</span>{% elif r.earned_at %}<span class="muted">not yet</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% endif %}
 </section>
 
