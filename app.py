@@ -306,7 +306,8 @@ def init_db():
     pcols = [r[1] for r in db.execute("PRAGMA table_info(players)")]
     for col, decl in (("age", "INTEGER"), ("grade", "TEXT"), ("height", "TEXT"),
                       ("weight", "TEXT"), ("bats", "TEXT"), ("throws", "TEXT"),
-                      ("positions", "TEXT"), ("fav_team", "TEXT")):
+                      ("positions", "TEXT"), ("fav_team", "TEXT"),
+                      ("guest", "INTEGER NOT NULL DEFAULT 0")):
         if col not in pcols:
             db.execute(f"ALTER TABLE players ADD COLUMN {col} {decl}")
     # Migration: per-drill "require rounds/reps" flag on activities.
@@ -831,7 +832,8 @@ def _scoreboard_rows():
     """Ranked scoreboard rows, shared by the home page and /scoreboard."""
     db = get_db()
     players = db.execute("SELECT * FROM players WHERE active=1").fetchall()
-    rows = [{"name": p["name"], "id": p["id"], **player_stats(p["id"])} for p in players]
+    rows = [{"name": p["name"], "id": p["id"], "guest": p["guest"], **player_stats(p["id"])}
+            for p in players]
     rows.sort(key=lambda r: (-r["total"], -r["streak"], r["name"].lower()))
     return rows
 
@@ -1435,7 +1437,8 @@ def team():
     players = db.execute(
         "SELECT * FROM players WHERE active=1 ORDER BY name COLLATE NOCASE"
     ).fetchall()
-    roster = [{"name": p["name"], "id": p["id"], **player_stats(p["id"])} for p in players]
+    roster = [{"name": p["name"], "id": p["id"], "guest": p["guest"], **player_stats(p["id"])}
+              for p in players]
     me = current_player()
     return render_template(
         "team.html", feed=_team_feed(), roster=roster,
@@ -1680,13 +1683,23 @@ def activity_delete(aid):
 @coach_required
 def player_new():
     name = request.form.get("name", "").strip()
+    guest = 1 if request.form.get("guest") else 0
     if name:
         get_db().execute(
-            "INSERT INTO players(name, created) VALUES(?,?)",
-            (name, now_mt().isoformat(timespec="seconds")),
+            "INSERT INTO players(name, created, guest) VALUES(?,?,?)",
+            (name, now_mt().isoformat(timespec="seconds"), guest),
         )
         get_db().commit()
-        flash(f"Added {name}.", "ok")
+        flash(f"Added {name}{' (guest)' if guest else ''}.", "ok")
+    return redirect(url_for("coach_home"))
+
+
+@app.route("/coach/player/<int:pid>/guest", methods=["POST"])
+@coach_required
+def player_toggle_guest(pid):
+    get_db().execute("UPDATE players SET guest = 1 - COALESCE(guest,0) WHERE id=?", (pid,))
+    get_db().commit()
+    flash("Moved.", "ok")
     return redirect(url_for("coach_home"))
 
 

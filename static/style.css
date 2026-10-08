@@ -595,3 +595,7 @@ input:focus, textarea:focus, select:focus {
 .secrethdr { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:16px; font-size:1.02rem; }
 .secretcount { font-size:.72rem; font-weight:700; background:#eef2f7; color:var(--muted); border-radius:999px; padding:2px 10px; }
 .secretcount.hot { background:#fff3cd; color:#8a6d1b; }
+
+/* Guest Competitors */
+.guesthdr { font-size:.95rem; color:var(--muted); margin:14px 0 6px; border-top:1px dashed var(--line); padding-top:12px; }
+.guestchk { font-size:.85rem; color:var(--muted); display:inline-flex; align-items:center; gap:4px; margin-left:4px; }

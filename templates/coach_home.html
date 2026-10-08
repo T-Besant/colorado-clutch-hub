@@ -162,36 +162,49 @@
   <form method="post" action="{{ url_for('player_new') }}" class="inline">
     <input name="name" placeholder="Add a player's name" required>
     <button class="btn small" type="submit">Add</button>
+    <label class="guestchk"><input type="checkbox" name="guest" value="1"> guest</label>
   </form>
-  <ul class="rosterlist">
-    {% for p in players %}
-      <li>
-        <span>
-          <a href="{{ url_for('coach_player', pid=p.id) }}">{{ p.name }}</a>
-          {% if p.pin_hash %}<span class="pinok" title="PIN set">🔒</span>
-          {% else %}<span class="pinno" title="No PIN yet">— no PIN</span>{% endif %}
-          {% set st = pstats[p.id] %}
-          <span class="rosterstat" title="Points">{{ st.total }} pts</span>
-          <span class="rosterstat" title="Day streak">🔥 {{ st.streak }}</span>
-          {% if not st.did_today %}<span class="rosterstat cold" title="No activity today">💤 today</span>{% endif %}
-        </span>
-        <span class="rowacts">
-          {% if p.pin_hash %}
-            <form method="post" action="{{ url_for('player_resetpin', pid=p.id) }}"
-                  onsubmit="return confirm('Reset {{ p.name }}\'s PIN? They will set a new one at next login.');">
-              <button class="link-muted" type="submit">reset PIN</button>
-            </form>
-          {% endif %}
-          <form method="post" action="{{ url_for('player_delete', pid=p.id) }}"
-                onsubmit="return confirm('Remove {{ p.name }}?');">
-            <button class="link-danger" type="submit">remove</button>
+
+  {% macro rosterrow(p) %}
+    <li>
+      <span>
+        <a href="{{ url_for('coach_player', pid=p.id) }}">{{ p.name }}</a>
+        {% if p.pin_hash %}<span class="pinok" title="PIN set">🔒</span>
+        {% else %}<span class="pinno" title="No PIN yet">— no PIN</span>{% endif %}
+        {% set st = pstats[p.id] %}
+        <span class="rosterstat" title="Points">{{ st.total }} pts</span>
+        <span class="rosterstat" title="Day streak">🔥 {{ st.streak }}</span>
+        {% if not st.did_today %}<span class="rosterstat cold" title="No activity today">💤 today</span>{% endif %}
+      </span>
+      <span class="rowacts">
+        <form method="post" action="{{ url_for('player_toggle_guest', pid=p.id) }}">
+          <button class="link-muted" type="submit">{{ '→ squad' if p.guest else '→ guest' }}</button>
+        </form>
+        {% if p.pin_hash %}
+          <form method="post" action="{{ url_for('player_resetpin', pid=p.id) }}"
+                onsubmit="return confirm('Reset {{ p.name }}\'s PIN? They will set a new one at next login.');">
+            <button class="link-muted" type="submit">reset PIN</button>
           </form>
-        </span>
-      </li>
-    {% else %}
-      <li class="empty small">No players yet — add your team above.</li>
-    {% endfor %}
+        {% endif %}
+        <form method="post" action="{{ url_for('player_delete', pid=p.id) }}"
+              onsubmit="return confirm('Remove {{ p.name }}?');">
+          <button class="link-danger" type="submit">remove</button>
+        </form>
+      </span>
+    </li>
+  {% endmacro %}
+
+  {% set squad = players | rejectattr('guest') | list %}
+  {% set guests = players | selectattr('guest') | list %}
+  <ul class="rosterlist">
+    {% for p in squad %}{{ rosterrow(p) }}{% else %}<li class="empty small">No players yet — add your team above.</li>{% endfor %}
   </ul>
+  {% if guests %}
+    <h3 class="guesthdr">🎟️ Guest Competitors ({{ guests|length }})</h3>
+    <ul class="rosterlist">
+      {% for p in guests %}{{ rosterrow(p) }}{% endfor %}
+    </ul>
+  {% endif %}
 </section>
 
 <section class="panel">
