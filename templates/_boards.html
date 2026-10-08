@@ -2,6 +2,7 @@
    alltime/week/month/drills) and `my_id`. Optional `board_limit` shows only the
    top N per board plus the logged-in player's own rank row if they're below it. #}
 {% macro board_table(rows, valkey, vallabel, show_streak, my_id, limit) %}
+  {% set gids = guest_ids() %}
   {% set shown = (rows[:limit]) if limit else rows %}
   {% set shown_ids = shown | map(attribute='id') | list %}
   {% set ns = namespace(rank=0, row=None) %}
@@ -15,7 +16,7 @@
         {% set parts = r.name.split() %}
         <tr class="{{ 'meRow' if r.id == my_id else '' }}">
           <td class="rank"><span class="rankbadge {% if loop.index == 1 %}r1{% elif loop.index == 2 %}r2{% elif loop.index == 3 %}r3{% endif %}">{{ loop.index }}</span></td>
-          <td class="nm"><a href="{{ url_for('player_profile', pid=r.id) }}">{{ parts[0] }}{% if parts|length > 1 %} {{ parts[1][0] }}.{% endif %}</a>{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}</td>
+          <td class="nm"><a href="{{ url_for('player_profile', pid=r.id) }}">{{ parts[0] }}{% if parts|length > 1 %} {{ parts[1][0] }}.{% endif %}</a>{% if r.id == my_id %} <span class="youtag">you</span>{% endif %}{% if r.id in gids %} <span class="guesttag">Guest Competitor</span>{% endif %}</td>
           <td class="big">{{ r[valkey] }}</td>
           {% if show_streak %}<td class="stk">{{ r.streak }}{% if r.streak > 0 %}🔥{% endif %}</td>{% endif %}
         </tr>

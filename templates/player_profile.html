@@ -2,7 +2,7 @@
 {% block title %}{{ player.name.split()[0] }} — {{ TEAM_SHORT }}{% endblock %}
 {% block body %}
 <a class="back" href="{{ url_for('team') }}">← Team</a>
-<h1>{{ player.name.split()[0] }}{% if is_me %} <span class="youtag">you</span>{% endif %}</h1>
+<h1>{{ player.name.split()[0] }}{% if is_me %} <span class="youtag">you</span>{% endif %}{% if player.guest %} <span class="guesttag">Guest Competitor</span>{% endif %}</h1>
 <p class="lead">Teammate activity — read only.{% if is_me %} This is how others see your page.{% endif %}</p>
 {% if is_coach() %}
   <p><a class="btn small" href="{{ url_for('coach_player', pid=player.id) }}">Manage as coach → (edit / remove entries, notes, focus)</a></p>

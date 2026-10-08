@@ -599,3 +599,5 @@ input:focus, textarea:focus, select:focus {
 /* Guest Competitors */
 .guesthdr { font-size:.95rem; color:var(--muted); margin:14px 0 6px; border-top:1px dashed var(--line); padding-top:12px; }
 .guestchk { font-size:.85rem; color:var(--muted); display:inline-flex; align-items:center; gap:4px; margin-left:4px; }
+
+.guesttag { display:inline-block; background:#eadcff; color:#5b3ba0; border-radius:999px; padding:1px 8px; font-size:.64rem; font-weight:800; text-transform:uppercase; letter-spacing:.03em; vertical-align:middle; }

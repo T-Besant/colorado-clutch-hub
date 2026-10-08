@@ -338,6 +338,8 @@ def get_setting(key, default=None):
 # Coach-set reward: a "Top Secret Bonus Video" that unlocks on a player's page
 # once they complete that week's drill challenge (resets weekly with the challenge).
 app.jinja_env.globals["secret_video_url"] = lambda: get_setting("secret_video_url")
+app.jinja_env.globals["guest_ids"] = lambda: {
+    r["id"] for r in get_db().execute("SELECT id FROM players WHERE guest=1")}
 
 
 # ---------------------------------------------------------------------------
